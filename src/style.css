@@ -1,0 +1,23 @@
+:root {
+  --page-bg: #f8fafc;
+  --panel-bg: #ffffff;
+  --text-main: #111827;
+  --text-muted: #64748b;
+  --border-color: #e5e7eb;
+  --primary-color: #2563eb;
+}
+
+:root.dark {
+  --page-bg: #020617;
+  --panel-bg: #0f172a;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --border-color: #334155;
+  --primary-color: #2563eb;
+}
+
+body {
+  margin: 0;
+  background: var(--page-bg);
+  color: var(--text-main);
+}

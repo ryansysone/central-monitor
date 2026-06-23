@@ -1,0 +1,15 @@
+<script setup lang="ts">
+import { onMounted } from "vue";
+
+onMounted(() => {
+  const savedTheme = localStorage.getItem("theme");
+
+  if (savedTheme === "dark") {
+    document.documentElement.classList.add("dark");
+  }
+});
+</script>
+
+<template>
+  <RouterView />
+</template>
