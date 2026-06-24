@@ -44,7 +44,7 @@ export async function fetchDashboardAgents(): Promise<AgentDashboardItem[]> {
   return result.data ?? [];
 }
 
-export async function fetchRecentLogs(limit = 15): Promise<LogItem[]> {
+export async function fetchRecentLogs(limit = 30): Promise<LogItem[]> {
   const response = await fetch(`${BASE_URL}/api/logs/recent?limit=${limit}`);
 
   if (!response.ok) {

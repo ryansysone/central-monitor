@@ -44,7 +44,7 @@ export const useDashboardStore = defineStore("dashboard", {
         const [summaryData, agentsData, logsData] = await Promise.all([
           fetchDashboardSummary(),
           fetchDashboardAgents(),
-          fetchRecentLogs(5),
+          fetchRecentLogs(50),
         ]);
 
         this.summary = summaryData;

@@ -156,7 +156,7 @@ onMounted(() => {
   padding: 10px 12px;
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 15px;
   background: var(--panel-bg);
   color: var(--text-main);
 }
@@ -171,7 +171,7 @@ onMounted(() => {
   padding: 10px 12px;
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 15px;
   background: var(--panel-bg);
   color: var(--text-main);
 }
@@ -198,14 +198,14 @@ onMounted(() => {
 .log-count-summary {
   margin-bottom: 16px;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .logs-empty-state {
   padding: 40px 20px;
   text-align: center;
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: 15px;
   background: var(--panel-bg);
   border: 1px dashed var(--border-color);
   border-radius: 10px;
@@ -221,7 +221,7 @@ onMounted(() => {
   padding: 10px;
   border-bottom: 1px solid var(--border-color);
   text-align: left;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-main);
 }
 
@@ -249,7 +249,7 @@ onMounted(() => {
   min-width: 72px;
   padding: 4px 10px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 700;
 }
 
