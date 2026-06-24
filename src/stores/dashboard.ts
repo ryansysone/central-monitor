@@ -1,7 +1,10 @@
 import { defineStore } from "pinia";
 import { fetchDashboardAgents, fetchDashboardSummary, fetchRecentLogs } from "../api/dashboardApi";
+import { useNotificationStore } from "./notification";
 
 import type { AgentDashboardItem, DashboardSummary, LogItem } from "../types/dashboard";
+
+type WebSocketConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
 
 interface DashboardState {
   summary: DashboardSummary;
@@ -10,6 +13,7 @@ interface DashboardState {
   loading: boolean;
   error: string;
   websocket: WebSocket | null;
+  connectionStatus: WebSocketConnectionStatus;
 }
 
 export const useDashboardStore = defineStore("dashboard", {
@@ -28,6 +32,7 @@ export const useDashboardStore = defineStore("dashboard", {
     error: "",
 
     websocket: null,
+    connectionStatus: "disconnected",
   }),
 
   actions: {
@@ -54,12 +59,18 @@ export const useDashboardStore = defineStore("dashboard", {
     },
 
     connectWebSocket() {
+      const notificationStore = useNotificationStore();
+
       if (this.websocket) return;
+
+      this.connectionStatus = "connecting";
 
       const ws = new WebSocket("ws://localhost:9090/ws/dashboard");
 
       ws.onopen = () => {
         console.log("Dashboard websocket connected");
+
+        this.connectionStatus = "connected";
       };
 
       ws.onmessage = (message) => {
@@ -79,6 +90,15 @@ export const useDashboardStore = defineStore("dashboard", {
 
             case "logs:new":
               this.logs = [event.payload, ...this.logs].slice(0, 20);
+
+              if (event.payload.logLevel === "ERROR") {
+                notificationStore.pushNotification({
+                  type: "error",
+                  title: "New Error Detected",
+                  message: `${event.payload.hostName || event.payload.agentCode}: ${event.payload.message}`,
+                });
+              }
+
               break;
 
             default:
@@ -92,10 +112,15 @@ export const useDashboardStore = defineStore("dashboard", {
 
       ws.onerror = (error) => {
         console.error("Dashboard websocket error", error);
+
+        this.connectionStatus = "error";
       };
 
       ws.onclose = () => {
         console.log("Dashboard websocket disconnected");
+
+        this.connectionStatus = "disconnected";
+
         this.websocket = null;
       };
 
@@ -107,6 +132,7 @@ export const useDashboardStore = defineStore("dashboard", {
 
       this.websocket.close();
       this.websocket = null;
+      this.connectionStatus = "disconnected";
     },
   },
 });
