@@ -275,7 +275,7 @@ onUnmounted(() => {
         </p>
 
         <p class="auto-refresh">
-          自動更新: ON ({{ autoRefreshSeconds }}s)
+          自動更新：開啟（{{ autoRefreshSeconds }} 秒）
         </p>
       </div>
 
@@ -400,7 +400,7 @@ onUnmounted(() => {
             <div>
               <h3>高風險主機</h3>
               <p class="widget-hint">
-                CPU / Memory / Disk ≥ 90%
+                CPU／Memory／Disk 使用率 ≥ 90%
               </p>
             </div>
 
@@ -429,7 +429,7 @@ onUnmounted(() => {
             <div>
               <h3>異常主機</h3>
               <p class="widget-hint">
-                偵測到 ERROR 日誌
+                偵測到 ERROR 等級日誌
               </p>
             </div>
 
@@ -437,7 +437,7 @@ onUnmounted(() => {
           </div>
 
           <div v-if="errorAgents.length === 0" class="error-empty">
-            No error hosts
+            目前沒有異常主機
           </div>
 
           <ul v-else class="error-hosts-list">
@@ -452,7 +452,7 @@ onUnmounted(() => {
           <div class="latest-error-header">
             <div>
               <h3>最新異常</h3>
-              <p class="widget-hint">最近一筆 ERROR 日誌</p>
+              <p class="widget-hint">最近一筆錯誤（ERROR）日誌</p>
             </div>
           </div>
 
@@ -477,7 +477,7 @@ onUnmounted(() => {
       </section>
 
       <section class="top-chart-toolbar">
-        <span>Top N:</span>
+        <span>顯示數量：</span>
 
         <button :class="{ active: topN === 3 }" @click="changeTopN(3)">
           Top 3
@@ -497,19 +497,19 @@ onUnmounted(() => {
       </section>
 
       <section class="top-charts-grid">
-        <TopHostsBarChart :title="`CPU Top ${topN} Hosts`" :hosts="filteredAgents" metric-key="cpuUsage" :top-n="topN"
-          empty-text="No CPU data" />
+        <TopHostsBarChart :title="`CPU 使用率前 ${topN} 名`" :hosts="filteredAgents" metric-key="cpuUsage" :top-n="topN"
+          empty-text="目前沒有 CPU 資料" />
 
-        <TopHostsBarChart :title="`Memory Top ${topN} Hosts`" :hosts="filteredAgents" metric-key="memoryUsage"
-          :top-n="topN" empty-text="No memory data" />
+        <TopHostsBarChart :title="`Memory 使用率前 ${topN} 名`" :hosts="filteredAgents" metric-key="memoryUsage"
+          empty-text="目前沒有 Memory 資料" />
 
-        <TopHostsBarChart :title="`Disk Top ${topN} Hosts`" :hosts="filteredAgents" metric-key="diskUsage" :top-n="topN"
-          empty-text="No disk data" />
+        <TopHostsBarChart :title="`Disk 使用率前 ${topN} 名`" :hosts="filteredAgents" metric-key="diskUsage" :top-n="topN"
+          empty-text="目前沒有 Disk 資料" />
       </section>
 
       <section class="content-section">
         <div class="search-panel">
-          <input v-model="searchKeyword" class="search-input" placeholder="依 Agent Code、主機名稱或狀態搜尋..."
+          <input v-model="searchKeyword" class="search-input" placeholder="依 Agent Code、主機名稱或主機狀態搜尋..."
             @keydown.enter="refreshDashboard" />
 
           <button v-if="searchKeyword.trim()" class="clear-search-button" @click="clearSearch">
