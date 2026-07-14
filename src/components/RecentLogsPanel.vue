@@ -19,7 +19,6 @@ function formatTime(value: string | null | undefined): string {
 
   return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
 }
-
 </script>
 
 <template>
@@ -28,7 +27,7 @@ function formatTime(value: string | null | undefined): string {
       <h2 class="panel-title">最新日誌</h2>
 
       <span class="record-count">
-        {{ items.length }} Log(s)
+        共 {{ items.length }} 筆日誌
       </span>
     </div>
 
@@ -41,23 +40,32 @@ function formatTime(value: string | null | undefined): string {
           <th>時間</th>
         </tr>
       </thead>
+
       <tbody>
         <tr v-if="items.length === 0">
-          <td colspan="4" class="empty-cell">No log data</td>
+          <td colspan="4" class="empty-cell">
+            目前沒有日誌資料
+          </td>
         </tr>
 
         <tr v-for="item in items" :key="item.id">
           <td>
-            <span :class="['log-badge', item.logLevel.toLowerCase()]">
+            <span :class="[
+              'log-badge',
+              item.logLevel.toLowerCase(),
+            ]">
               {{ item.logLevel }}
             </span>
           </td>
+
           <td>
             {{ item.agentCode }}
-            <br>
+            <br />
             <small>{{ item.hostName }}</small>
           </td>
+
           <td>{{ item.message }}</td>
+
           <td>{{ formatTime(item.loggedAt) }}</td>
         </tr>
       </tbody>

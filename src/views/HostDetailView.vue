@@ -98,7 +98,7 @@ async function loadHost() {
     host.value = await fetchHostDetail(agentCode);
   } catch (err) {
     console.error("Host detail failed", err);
-    error.value = "Failed to load host detail";
+    error.value = "無法載入主機詳細資訊";
     loading.value = false;
     return;
   }
@@ -139,17 +139,18 @@ onUnmounted(() => {
 });
 </script>
 
+
 <template>
   <div class="host-detail-page">
-    <button class="back-btn" @click="goBack">← Back</button>
+    <button class="back-btn" @click="goBack">← 返回</button>
 
-    <h1>Host Detail</h1>
+    <h1>主機詳細資訊</h1>
 
     <div class="last-updated">
-      Last Updated: {{ lastUpdated }}
+      最後更新：{{ lastUpdated }}
     </div>
 
-    <div v-if="loading" class="loading">Loading...</div>
+    <div v-if="loading" class="loading">載入中...</div>
 
     <div v-else-if="error" class="error">
       {{ error }}
@@ -169,17 +170,17 @@ onUnmounted(() => {
 
       <div class="card-grid">
         <div class="detail-card gauge-card">
-          <div class="card-title">CPU Usage</div>
+          <div class="card-title">CPU 使用率</div>
           <UsageGaugeChart title="CPU" :value="host.cpuUsage" />
         </div>
 
         <div class="detail-card gauge-card">
-          <div class="card-title">Memory Usage</div>
+          <div class="card-title">Memory 使用率</div>
           <UsageGaugeChart title="Memory" :value="host.memoryUsage" />
         </div>
 
         <div class="detail-card gauge-card">
-          <div class="card-title">Disk Usage</div>
+          <div class="card-title">Disk 使用率</div>
           <UsageGaugeChart title="Disk" :value="host.diskUsage" />
         </div>
       </div>
@@ -187,17 +188,23 @@ onUnmounted(() => {
       <div class="card-grid">
         <div class="detail-card">
           <div class="card-title">Database</div>
-          <div class="card-value">{{ host.databaseStatus ?? "UNKNOWN" }}</div>
+          <div class="card-value">
+            {{ host.databaseStatus ?? "UNKNOWN" }}
+          </div>
         </div>
 
         <div class="detail-card">
           <div class="card-title">FTP</div>
-          <div class="card-value">{{ host.ftpStatus ?? "UNKNOWN" }}</div>
+          <div class="card-value">
+            {{ host.ftpStatus ?? "UNKNOWN" }}
+          </div>
         </div>
 
         <div class="detail-card">
-          <div class="card-title">Application</div>
-          <div class="card-value">{{ host.applicationStatus ?? "UNKNOWN" }}</div>
+          <div class="card-title">應用程式</div>
+          <div class="card-value">
+            {{ host.applicationStatus ?? "UNKNOWN" }}
+          </div>
         </div>
       </div>
 
@@ -210,52 +217,48 @@ onUnmounted(() => {
       <ServiceTrendChart :history="recentServiceHistory" />
 
       <div class="section">
-        <h3>Service Timeline</h3>
+        <h3>服務狀態時間軸</h3>
 
         <ServiceTimelineChart :history="recentServiceHistory" />
       </div>
 
       <div class="section">
-        <h3>Service Availability Report</h3>
+        <h3>服務可用率報表</h3>
 
         <ServiceAvailabilityChart :database="serviceAvailability.database" :ftp="serviceAvailability.ftp"
           :application="serviceAvailability.application" />
 
         <div class="card-grid">
           <div class="detail-card">
-            <div class="card-title">Database Availability</div>
+            <div class="card-title">Database 可用率</div>
             <div class="card-value">
               {{ serviceAvailability.database }}%
             </div>
           </div>
 
           <div class="detail-card">
-            <div class="card-title">FTP Availability</div>
+            <div class="card-title">FTP 可用率</div>
             <div class="card-value">
               {{ serviceAvailability.ftp }}%
             </div>
           </div>
 
           <div class="detail-card">
-            <div class="card-title">Application Availability</div>
+            <div class="card-title">應用程式可用率</div>
             <div class="card-value">
               {{ serviceAvailability.application }}%
             </div>
           </div>
         </div>
-
-
-
-
       </div>
 
       <div class="section">
-        <h3>Metric History</h3>
+        <h3>效能指標歷史紀錄</h3>
 
         <table class="history-table">
           <thead>
             <tr>
-              <th>Time</th>
+              <th>時間</th>
               <th>CPU</th>
               <th>Memory</th>
               <th>Disk</th>
@@ -274,15 +277,15 @@ onUnmounted(() => {
       </div>
 
       <div class="section">
-        <h3>Service History</h3>
+        <h3>服務狀態歷史紀錄</h3>
 
         <table class="history-table">
           <thead>
             <tr>
-              <th>Time</th>
+              <th>時間</th>
               <th>Database</th>
               <th>FTP</th>
-              <th>Application</th>
+              <th>應用程式</th>
             </tr>
           </thead>
 
@@ -291,19 +294,28 @@ onUnmounted(() => {
               <td>{{ formatDateTime(item.collectedAt) }}</td>
 
               <td>
-                <span :class="['service-badge', serviceStatusClass(item.databaseStatus)]">
+                <span :class="[
+                  'service-badge',
+                  serviceStatusClass(item.databaseStatus),
+                ]">
                   {{ item.databaseStatus }}
                 </span>
               </td>
 
               <td>
-                <span :class="['service-badge', serviceStatusClass(item.ftpStatus)]">
+                <span :class="[
+                  'service-badge',
+                  serviceStatusClass(item.ftpStatus),
+                ]">
                   {{ item.ftpStatus }}
                 </span>
               </td>
 
               <td>
-                <span :class="['service-badge', serviceStatusClass(item.applicationStatus)]">
+                <span :class="[
+                  'service-badge',
+                  serviceStatusClass(item.applicationStatus),
+                ]">
                   {{ item.applicationStatus }}
                 </span>
               </td>

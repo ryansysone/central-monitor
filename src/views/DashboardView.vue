@@ -271,35 +271,35 @@ onUnmounted(() => {
         </div>
 
         <p class="last-updated">
-          Last Updated: {{ lastUpdatedAt }}
+          最後更新: {{ lastUpdatedAt }}
         </p>
 
         <p class="auto-refresh">
-          Auto Refresh: ON ({{ autoRefreshSeconds }}s)
+          自動更新: ON ({{ autoRefreshSeconds }}s)
         </p>
       </div>
 
       <div class="header-actions">
         <AlertCenter />
         <button class="theme-toggle-button" @click="themeStore.toggleTheme">
-          {{ themeStore.mode === "dark" ? "Light Mode" : "Dark Mode" }}
+          {{ themeStore.mode === "dark" ? "淺色模式" : "深色模式" }}
         </button>
         <!-- <div :class="['connection-indicator', dashboardStore.connectionStatus]">
           <span class="connection-dot"></span>
           <span>{{ connectionStatusLabel }}</span>
         </div> -->
         <button class="export-button" :disabled="dashboardStore.loading" @click="exportReport">
-          Export Report
+          匯出報表
         </button>
 
         <button class="refresh-button" :disabled="dashboardStore.loading" @click="refreshDashboard">
-          Refresh Now
+          重新整理
         </button>
       </div>
     </header>
 
     <div v-if="dashboardStore.loading" class="status-message">
-      Loading dashboard data...
+      正在載入儀表板...
     </div>
 
     <div v-else-if="dashboardStore.error" class="status-message error">
@@ -319,21 +319,21 @@ onUnmounted(() => {
 
       <section class="service-status-grid">
         <div class="service-status-card up">
-          <div class="service-status-title">Services UP</div>
+          <div class="service-status-title">服務正常</div>
           <div class="service-status-value">
             {{ serviceStatusSummary.up }}
           </div>
         </div>
 
         <div class="service-status-card down">
-          <div class="service-status-title">Services DOWN</div>
+          <div class="service-status-title">服務異常</div>
           <div class="service-status-value">
             {{ serviceStatusSummary.down }}
           </div>
         </div>
 
         <div class="service-status-card unknown">
-          <div class="service-status-title">Services UNKNOWN</div>
+          <div class="service-status-title">服務未知</div>
           <div class="service-status-value">
             {{ serviceStatusSummary.unknown }}
           </div>
@@ -343,8 +343,8 @@ onUnmounted(() => {
       <section class="noc-widgets-grid">
         <div class="health-score-card">
           <div>
-            <h3>Dashboard Health Score</h3>
-            <p>Calculated from offline, critical, and error hosts</p>
+            <h3>系統健康度</h3>
+            <p>依據離線、高風險及異常主機計算</p>
           </div>
 
           <div class="health-score-result">
@@ -362,10 +362,10 @@ onUnmounted(() => {
             <div class="health-score-label">
               {{
                 dashboardHealthScore >= 90
-                  ? "Healthy"
+                  ? "健康"
                   : dashboardHealthScore >= 70
-                    ? "Warning"
-                    : "Critical"
+                    ? "警告"
+                    : "危及"
               }}
             </div>
           </div>
@@ -374,9 +374,9 @@ onUnmounted(() => {
         <div class="offline-hosts-card">
           <div class="offline-hosts-header">
             <div>
-              <h3>Offline Hosts</h3>
+              <h3>離線主機</h3>
               <p class="widget-hint">
-                Click host to view detail
+                點擊主機查看詳細資訊
               </p>
             </div>
 
@@ -384,7 +384,7 @@ onUnmounted(() => {
           </div>
 
           <div v-if="offlineAgents.length === 0" class="offline-empty">
-            No offline hosts
+            目前沒有離線主機
           </div>
 
           <ul v-else class="offline-hosts-list">
@@ -398,7 +398,7 @@ onUnmounted(() => {
         <div class="critical-hosts-card">
           <div class="critical-hosts-header">
             <div>
-              <h3>Critical Hosts</h3>
+              <h3>高風險主機</h3>
               <p class="widget-hint">
                 CPU / Memory / Disk ≥ 90%
               </p>
@@ -408,7 +408,7 @@ onUnmounted(() => {
           </div>
 
           <div v-if="criticalAgents.length === 0" class="critical-empty">
-            No critical hosts
+            目前沒有高風險主機
           </div>
 
           <ul v-else class="critical-hosts-list">
@@ -427,9 +427,9 @@ onUnmounted(() => {
         <div class="error-hosts-card">
           <div class="error-hosts-header">
             <div>
-              <h3>Error Hosts</h3>
+              <h3>異常主機</h3>
               <p class="widget-hint">
-                ERROR logs detected
+                偵測到 ERROR 日誌
               </p>
             </div>
 
@@ -451,13 +451,13 @@ onUnmounted(() => {
         <div class="latest-error-card">
           <div class="latest-error-header">
             <div>
-              <h3>Latest Error</h3>
-              <p class="widget-hint">Most recent ERROR log</p>
+              <h3>最新異常</h3>
+              <p class="widget-hint">最近一筆 ERROR 日誌</p>
             </div>
           </div>
 
           <div v-if="!latestErrorLog" class="latest-error-empty">
-            No recent error
+            目前沒有 ERROR 日誌
           </div>
 
           <div v-else class="latest-error-body clickable-error" @click="goToHostDetail(latestErrorLog.agentCode)">
@@ -492,7 +492,7 @@ onUnmounted(() => {
         </button>
 
         <span v-if="searchKeyword.trim()" class="filter-hint">
-          Showing {{ filteredAgents.length }} host(s)
+          顯示 {{ filteredAgents.length }} 主機數
         </span>
       </section>
 
@@ -509,11 +509,11 @@ onUnmounted(() => {
 
       <section class="content-section">
         <div class="search-panel">
-          <input v-model="searchKeyword" class="search-input"
-            placeholder="Search host by agent code, host name, or status..." @keydown.enter="refreshDashboard" />
+          <input v-model="searchKeyword" class="search-input" placeholder="依 Agent Code、主機名稱或狀態搜尋..."
+            @keydown.enter="refreshDashboard" />
 
           <button v-if="searchKeyword.trim()" class="clear-search-button" @click="clearSearch">
-            Clear
+            清除
           </button>
         </div>
       </section>
@@ -526,7 +526,7 @@ onUnmounted(() => {
 
       <section class="content-section">
         <div v-if="filteredAgents.length === 0 && searchKeyword.trim()" class="empty-filter-message">
-          No hosts match your search keyword.
+          找不到符合搜尋條件的主機
         </div>
 
         <AgentStatusTable v-else :items="filteredAgents" @select-agent="goToHostDetail" />

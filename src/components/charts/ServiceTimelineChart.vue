@@ -8,6 +8,7 @@ const props = defineProps<{
   history: ServiceHistory[];
 }>();
 
+
 const option = computed<EChartsOption>(() => {
   const databaseData: number[][] = [];
   const ftpData: number[][] = [];

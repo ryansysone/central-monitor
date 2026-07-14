@@ -34,10 +34,10 @@ function openHost(agentCode: string) {
 
 <template>
   <div class="hosts-page">
-    <h1>Hosts</h1>
+    <h1>主機列表</h1>
 
     <div class="search-panel">
-      <input v-model="searchKeyword" class="search-input" placeholder="Search Host..." />
+      <input v-model="searchKeyword" class="search-input" placeholder="搜尋主機..." />
     </div>
 
     <div class="host-list">
@@ -57,20 +57,20 @@ function openHost(agentCode: string) {
             'status-badge',
             host.status.toLowerCase()
           ]">
-            {{ host.status }}
+            {{ host.status === "ONLINE" ? "在線" : "離線" }}
           </span>
         </div>
 
         <div class="usage-row">
-          CPU: {{ host.cpuUsage?.toFixed(1) ?? 0 }}%
+          CPU 使用率：{{ host.cpuUsage?.toFixed(1) ?? 0 }}%
         </div>
 
         <div class="usage-row">
-          Memory: {{ host.memoryUsage?.toFixed(1) ?? 0 }}%
+          Memory 使用率：{{ host.memoryUsage?.toFixed(1) ?? 0 }}%
         </div>
 
         <div class="usage-row">
-          Disk: {{ host.diskUsage?.toFixed(1) ?? 0 }}%
+          Disk 使用率：{{ host.diskUsage?.toFixed(1) ?? 0 }}%
         </div>
       </div>
     </div>

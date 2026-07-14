@@ -90,69 +90,96 @@ function getSeverityClass(type: string) {
 
 <template>
   <div class="alerts-page">
-    <h1>Alerts</h1>
+    <h1>警示中心</h1>
 
     <div class="alert-grid">
       <div class="alert-card critical">
-        <div class="alert-title">Critical Alerts</div>
+        <div class="alert-title">嚴重警示</div>
         <div class="alert-value">{{ criticalAlerts.length }}</div>
       </div>
 
       <div class="alert-card warning">
-        <div class="alert-title">Warnings</div>
+        <div class="alert-title">警告</div>
         <div class="alert-value">{{ warningAlerts.length }}</div>
       </div>
 
       <div class="alert-card healthy">
-        <div class="alert-title">Healthy Hosts</div>
+        <div class="alert-title">正常主機</div>
         <div class="alert-value">{{ healthyHosts.length }}</div>
       </div>
     </div>
 
     <div class="alert-panel">
-      <h2>Recent Alerts</h2>
+      <h2>目前警示</h2>
 
       <div class="filter-bar">
-        <button :class="['filter-btn', selectedFilter === 'ALL' ? 'active' : '']" @click="selectedFilter = 'ALL'">
-          All
+        <button :class="[
+          'filter-btn',
+          selectedFilter === 'ALL' ? 'active' : '',
+        ]" @click="selectedFilter = 'ALL'">
+          全部
         </button>
 
-        <button :class="['filter-btn', selectedFilter === 'CRITICAL' ? 'active' : '']"
-          @click="selectedFilter = 'CRITICAL'">
-          Critical
+        <button :class="[
+          'filter-btn',
+          selectedFilter === 'CRITICAL' ? 'active' : '',
+        ]" @click="selectedFilter = 'CRITICAL'">
+          嚴重
         </button>
 
-        <button :class="['filter-btn', selectedFilter === 'WARNING' ? 'active' : '']"
-          @click="selectedFilter = 'WARNING'">
-          Warning
+        <button :class="[
+          'filter-btn',
+          selectedFilter === 'WARNING' ? 'active' : '',
+        ]" @click="selectedFilter = 'WARNING'">
+          警告
         </button>
       </div>
 
       <p v-if="filteredAlerts.length === 0" class="empty-alert">
-        No active alerts.
+        目前沒有警示。
       </p>
 
       <div v-else class="alert-list">
         <div v-for="item in filteredAlerts" :key="`${item.type}-${item.agent.agentCode}`" :class="[
           'alert-row',
-          item.type === 'CRITICAL' ? 'critical-row' : 'warning-row',
+          item.type === 'CRITICAL'
+            ? 'critical-row'
+            : 'warning-row',
         ]" @click="selectedAgentCode = item.agent.agentCode">
-
-
-          <span :class="['severity-badge', getSeverityClass(item.type)]">
-            {{ item.type }}
+          <span :class="[
+            'severity-badge',
+            getSeverityClass(item.type),
+          ]">
+            {{
+              item.type === "CRITICAL"
+                ? "嚴重"
+                : item.type === "WARNING"
+                  ? "警告"
+                  : "資訊"
+            }}
           </span>
 
           {{ item.agent.agentCode }}
 
-          <div class="alert-reason" v-if="item.type === 'CRITICAL'">
-            <span v-if="item.agent.status === 'OFFLINE'">Host Offline</span>
-            <span v-if="item.agent.databaseStatus === 'DOWN'">DB Down</span>
-            <span v-if="item.agent.ftpStatus === 'DOWN'">FTP Down</span>
-            <span v-if="item.agent.applicationStatus === 'DOWN'">APP Down</span>
+          <div v-if="item.type === 'CRITICAL'" class="alert-reason">
+            <span v-if="item.agent.status === 'OFFLINE'">
+              主機離線
+            </span>
+
+            <span v-if="item.agent.databaseStatus === 'DOWN'">
+              Database 異常
+            </span>
+
+            <span v-if="item.agent.ftpStatus === 'DOWN'">
+              FTP 異常
+            </span>
+
+            <span v-if="item.agent.applicationStatus === 'DOWN'">
+              應用程式異常
+            </span>
           </div>
 
-          <div class="alert-reason" v-else>
+          <div v-else class="alert-reason">
             <span v-if="(item.agent.cpuUsage ?? 0) >= 80">
               CPU {{ item.agent.cpuUsage?.toFixed(1) }}%
             </span>
@@ -167,18 +194,54 @@ function getSeverityClass(type: string) {
           </div>
         </div>
       </div>
-      <div v-if="selectedAlert" class="alert-detail-panel">
-        <h2>Alert Detail</h2>
 
-        <p><strong>Agent Code:</strong> {{ selectedAlert.agentCode }}</p>
-        <p><strong>Host Name:</strong> {{ selectedAlert.hostName }}</p>
-        <p><strong>Status:</strong> {{ selectedAlert.status }}</p>
-        <p><strong>CPU:</strong> {{ selectedAlert.cpuUsage ?? 0 }}%</p>
-        <p><strong>Memory:</strong> {{ selectedAlert.memoryUsage ?? 0 }}%</p>
-        <p><strong>Disk:</strong> {{ selectedAlert.diskUsage ?? 0 }}%</p>
-        <p><strong>DB:</strong> {{ selectedAlert.databaseStatus ?? "UNKNOWN" }}</p>
-        <p><strong>FTP:</strong> {{ selectedAlert.ftpStatus ?? "UNKNOWN" }}</p>
-        <p><strong>APP:</strong> {{ selectedAlert.applicationStatus ?? "UNKNOWN" }}</p>
+      <div v-if="selectedAlert" class="alert-detail-panel">
+        <h2>警示詳細資訊</h2>
+
+        <p>
+          <strong>Agent Code：</strong>
+          {{ selectedAlert.agentCode }}
+        </p>
+
+        <p>
+          <strong>主機名稱：</strong>
+          {{ selectedAlert.hostName }}
+        </p>
+
+        <p>
+          <strong>主機狀態：</strong>
+          {{ selectedAlert.status }}
+        </p>
+
+        <p>
+          <strong>CPU：</strong>
+          {{ selectedAlert.cpuUsage ?? 0 }}%
+        </p>
+
+        <p>
+          <strong>Memory：</strong>
+          {{ selectedAlert.memoryUsage ?? 0 }}%
+        </p>
+
+        <p>
+          <strong>Disk：</strong>
+          {{ selectedAlert.diskUsage ?? 0 }}%
+        </p>
+
+        <p>
+          <strong>Database：</strong>
+          {{ selectedAlert.databaseStatus ?? "UNKNOWN" }}
+        </p>
+
+        <p>
+          <strong>FTP：</strong>
+          {{ selectedAlert.ftpStatus ?? "UNKNOWN" }}
+        </p>
+
+        <p>
+          <strong>應用程式：</strong>
+          {{ selectedAlert.applicationStatus ?? "UNKNOWN" }}
+        </p>
       </div>
     </div>
   </div>

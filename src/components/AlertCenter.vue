@@ -22,7 +22,7 @@ function toggleAlertCenter() {
 <template>
   <div class="alert-center">
     <button class="alert-center-button" @click="toggleAlertCenter">
-      Alerts
+      警示
       <span v-if="unreadCount > 0" class="alert-badge">
         {{ unreadCount }}
       </span>
@@ -30,15 +30,15 @@ function toggleAlertCenter() {
 
     <div v-if="isOpen" class="alert-panel">
       <div class="alert-panel-header">
-        <h3>Alert Center</h3>
+        <h3>警示中心</h3>
 
         <button @click="notificationStore.clearNotifications">
-          Clear
+          全部清除
         </button>
       </div>
 
       <div v-if="notificationStore.items.length === 0" class="alert-empty">
-        No alerts
+        目前沒有警示
       </div>
 
       <div v-else class="alert-list">

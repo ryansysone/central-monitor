@@ -26,47 +26,32 @@ function updateAutoRefreshSeconds() {
 
 <template>
   <div class="settings-page">
-    <h1>Settings</h1>
+    <h1>系統設定</h1>
 
     <div class="settings-panel">
-      <h2>System Settings</h2>
-
       <div class="setting-row">
-        <span>Dark Mode</span>
+        <div>
+          <h2>主題模式</h2>
+          <p>切換淺色或深色介面。</p>
+        </div>
 
         <button class="theme-toggle-button" @click="toggleDarkMode">
-          {{ isDarkMode ? "ON" : "OFF" }}
+          {{ isDarkMode ? "切換為淺色模式" : "切換為深色模式" }}
         </button>
       </div>
 
       <div class="setting-row">
-        <span>Auto Refresh</span>
+        <div>
+          <h2>自動重新整理</h2>
+          <p>設定儀表板自動更新的時間間隔。</p>
+        </div>
 
         <select v-model="autoRefreshSeconds" class="setting-select" @change="updateAutoRefreshSeconds">
-          <option :value="10">10s</option>
-          <option :value="30">30s</option>
-          <option :value="60">60s</option>
+          <option :value="10">10 秒</option>
+          <option :value="30">30 秒</option>
+          <option :value="60">1 分鐘</option>
+          <option :value="300">5 分鐘</option>
         </select>
-      </div>
-
-      <div class="setting-row">
-        <span>Metric History Limit</span>
-        <strong>20 rows</strong>
-      </div>
-
-      <div class="setting-row">
-        <span>CPU Warning Threshold</span>
-        <strong>80%</strong>
-      </div>
-
-      <div class="setting-row">
-        <span>Memory Warning Threshold</span>
-        <strong>80%</strong>
-      </div>
-
-      <div class="setting-row">
-        <span>Disk Warning Threshold</span>
-        <strong>80%</strong>
       </div>
     </div>
   </div>

@@ -9,6 +9,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import type { ChartData, ChartOptions } from "chart.js";
 import { Line } from "vue-chartjs";
 import type { MetricHistory } from "../types/dashboard";
 
@@ -30,13 +31,13 @@ const props = withDefaults(
   }
 );
 
-const chartData = computed(() => ({
+const chartData = computed<ChartData<"line">>(() => ({
   labels: props.history.map((item, index) => {
     return item.collectedAt || `#${index + 1}`;
   }),
   datasets: [
     {
-      label: "Memory Usage",
+      label: "Memory 使用率",
       data: props.history.map((item) => item.memoryUsage),
       tension: 0.3,
       fill: false,
@@ -44,7 +45,7 @@ const chartData = computed(() => ({
   ],
 }));
 
-const chartOptions = {
+const chartOptions: ChartOptions<"line"> = {
   responsive: true,
   maintainAspectRatio: false,
   scales: {
@@ -58,10 +59,10 @@ const chartOptions = {
 
 <template>
   <div class="chart-card">
-    <h3>Memory Trend</h3>
+    <h3>Memory 使用率趨勢</h3>
 
     <div v-if="props.history.length === 0" class="empty-chart">
-      No metric history data
+      目前沒有效能指標歷史資料
     </div>
 
     <div v-else class="chart-container">

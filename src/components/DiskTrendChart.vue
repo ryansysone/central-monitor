@@ -36,7 +36,7 @@ const chartData = computed(() => ({
   }),
   datasets: [
     {
-      label: "Disk Usage",
+      label: "Disk 使用率",
       data: props.history.map((item) => item.diskUsage),
       tension: 0.3,
       fill: false,
@@ -58,10 +58,10 @@ const chartOptions = {
 
 <template>
   <div class="chart-card">
-    <h3>Disk Trend</h3>
+    <h3>Disk 使用率趨勢</h3>
 
     <div v-if="props.history.length === 0" class="empty-chart">
-      No metric history data
+      目前沒有效能指標歷史資料
     </div>
 
     <div v-else class="chart-container">

@@ -1,31 +1,30 @@
 <script setup lang="ts">
 </script>
-
 <template>
   <aside class="sidebar">
     <h2 class="logo">
-      Monitor
+      中央監控
     </h2>
 
     <nav class="nav-menu">
       <RouterLink to="/" class="nav-item" exact-active-class="nav-item-active">
-        Dashboard
+        儀表板
       </RouterLink>
 
       <RouterLink to="/hosts" class="nav-item" active-class="nav-item-active">
-        Hosts
+        主機列表
       </RouterLink>
 
       <RouterLink to="/alerts" class="nav-item" active-class="nav-item-active">
-        Alerts
+        警示中心
       </RouterLink>
 
       <RouterLink to="/logs" class="nav-item" active-class="nav-item-active">
-        Logs
+        系統日誌
       </RouterLink>
 
       <RouterLink to="/settings" class="nav-item" active-class="nav-item-active">
-        Settings
+        系統設定
       </RouterLink>
     </nav>
   </aside>

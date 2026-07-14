@@ -9,6 +9,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import type { ChartData, ChartOptions } from "chart.js";
 import { Line } from "vue-chartjs";
 import type { ServiceHistory } from "../types/dashboard";
 
@@ -30,39 +31,46 @@ const props = withDefaults(
   }
 );
 
-function statusToValue(status: string) {
+function statusToValue(status: string): number {
   if (status === "UP") return 1;
   if (status === "DOWN") return 0;
+
   return 0.5;
 }
 
-const chartData = computed(() => ({
+const chartData = computed<ChartData<"line">>(() => ({
   labels: props.history.map((item, index) => {
     return item.collectedAt || `#${index + 1}`;
   }),
   datasets: [
     {
       label: "Database",
-      data: props.history.map((item) => statusToValue(item.databaseStatus)),
+      data: props.history.map((item) =>
+        statusToValue(item.databaseStatus)
+      ),
       tension: 0.2,
       fill: false,
     },
     {
       label: "FTP",
-      data: props.history.map((item) => statusToValue(item.ftpStatus)),
+      data: props.history.map((item) =>
+        statusToValue(item.ftpStatus)
+      ),
       tension: 0.2,
       fill: false,
     },
     {
-      label: "Application",
-      data: props.history.map((item) => statusToValue(item.applicationStatus)),
+      label: "應用程式",
+      data: props.history.map((item) =>
+        statusToValue(item.applicationStatus)
+      ),
       tension: 0.2,
       fill: false,
     },
   ],
 }));
 
-const chartOptions = {
+const chartOptions: ChartOptions<"line"> = {
   responsive: true,
   maintainAspectRatio: false,
   scales: {
@@ -72,9 +80,10 @@ const chartOptions = {
       ticks: {
         stepSize: 0.5,
         callback(value: string | number) {
-          if (value === 1) return "UP";
-          if (value === 0.5) return "UNKNOWN";
-          if (value === 0) return "DOWN";
+          if (Number(value) === 1) return "UP";
+          if (Number(value) === 0.5) return "UNKNOWN";
+          if (Number(value) === 0) return "DOWN";
+
           return "";
         },
       },
@@ -85,10 +94,10 @@ const chartOptions = {
 
 <template>
   <div class="chart-card">
-    <h3>Service Trend</h3>
+    <h3>服務狀態趨勢</h3>
 
     <div v-if="props.history.length === 0" class="empty-chart">
-      No service history data
+      目前沒有服務狀態歷史資料
     </div>
 
     <div v-else class="chart-container">
