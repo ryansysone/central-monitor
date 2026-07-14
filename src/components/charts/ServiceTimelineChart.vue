@@ -8,7 +8,6 @@ const props = defineProps<{
   history: ServiceHistory[];
 }>();
 
-
 const option = computed<EChartsOption>(() => {
   const databaseData: number[][] = [];
   const ftpData: number[][] = [];
@@ -42,7 +41,7 @@ const option = computed<EChartsOption>(() => {
 
     yAxis: {
       type: "category",
-      data: ["Application", "FTP", "Database"],
+      data: ["應用程式", "FTP", "Database"],
     },
 
     series: [
@@ -57,7 +56,7 @@ const option = computed<EChartsOption>(() => {
         data: ftpData,
       },
       {
-        name: "Application",
+        name: "應用程式",
         type: "scatter",
         data: applicationData,
       },

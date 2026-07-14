@@ -13,11 +13,14 @@ const props = defineProps<{
 }>();
 
 const topErrorHosts = computed(() => {
-  const errorCountMap = new Map<string, {
-    agentCode: string;
-    hostName: string;
-    count: number;
-  }>();
+  const errorCountMap = new Map<
+    string,
+    {
+      agentCode: string;
+      hostName: string;
+      count: number;
+    }
+  >();
 
   props.logs
     .filter((log) => log.logLevel === "ERROR")
@@ -41,6 +44,7 @@ const topErrorHosts = computed(() => {
     .sort((a, b) => b.count - a.count)
     .slice(0, props.topN ?? 5);
 });
+
 function handleChartClick(params: CallbackDataParams) {
   const index = params.dataIndex;
 
@@ -81,8 +85,8 @@ const chartOption = computed(() => ({
       return `
         <div>
           <strong>${String(item.name)}</strong><br/>
-          ERROR Count: ${String(item.value)}<br/>
-          Click to view host detail
+          ERROR 數量：${String(item.value)}<br/>
+          點擊查看主機詳細資訊
         </div>
       `;
     },
@@ -110,7 +114,7 @@ const chartOption = computed(() => ({
 
   series: [
     {
-      name: "Top Error Hosts",
+      name: "異常主機排行",
       type: "bar",
       label: {
         show: true,
@@ -142,13 +146,13 @@ const chartOption = computed(() => ({
 <template>
   <div class="top-error-hosts-card">
     <div class="chart-header">
-      <h3>Top Error Hosts</h3>
+      <h3>異常主機排行</h3>
 
-      <p>Error count by host from recent logs</p>
+      <p>依最近日誌中的 ERROR 數量統計</p>
     </div>
 
     <div v-if="topErrorHosts.length === 0" class="empty-state">
-      No ERROR logs
+      目前沒有 ERROR 日誌
     </div>
 
     <VChart v-else class="chart" :option="chartOption" autoresize @click="handleChartClick" />

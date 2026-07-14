@@ -10,8 +10,15 @@ const props = defineProps<{
 
 const topHosts = computed(() =>
   [...props.hosts]
-    .filter((host) => host.cpuUsage !== null && host.cpuUsage !== undefined)
-    .sort((a, b) => Number(b.cpuUsage) - Number(a.cpuUsage))
+    .filter(
+      (host) =>
+        host.cpuUsage !== null &&
+        host.cpuUsage !== undefined
+    )
+    .sort(
+      (a, b) =>
+        Number(b.cpuUsage) - Number(a.cpuUsage)
+    )
     .slice(0, props.topN ?? 5)
 );
 
@@ -38,14 +45,18 @@ const chartOption = computed(() => ({
   },
   yAxis: {
     type: "category",
-    data: topHosts.value.map((host) => host.hostName || host.agentCode),
+    data: topHosts.value.map(
+      (host) => host.hostName || host.agentCode
+    ),
     inverse: true,
   },
   series: [
     {
-      name: "CPU Usage",
+      name: "CPU 使用率",
       type: "bar",
-      data: topHosts.value.map((host) => Number(host.cpuUsage ?? 0)),
+      data: topHosts.value.map((host) =>
+        Number(host.cpuUsage ?? 0)
+      ),
       barWidth: 18,
     },
   ],
@@ -55,11 +66,11 @@ const chartOption = computed(() => ({
 <template>
   <div class="cpu-top-hosts-card">
     <div class="chart-header">
-      <h3>CPU Top {{ topN ?? 5 }} Hosts</h3>
+      <h3>CPU 使用率前 {{ topN ?? 5 }} 名</h3>
     </div>
 
     <div v-if="topHosts.length === 0" class="empty-state">
-      No CPU data
+      目前沒有 CPU 資料
     </div>
 
     <VChart v-else class="chart" :option="chartOption" autoresize />

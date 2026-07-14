@@ -7,6 +7,11 @@ const props = defineProps<{
   hosts: AgentDashboardItem[];
 }>();
 
+const statusNameMap: Record<string, string> = {
+  ONLINE: "在線",
+  OFFLINE: "離線",
+};
+
 const chartOption = computed(() => {
   const distribution = props.hosts.reduce(
     (acc, host) => {
@@ -27,14 +32,16 @@ const chartOption = computed(() => {
 
     series: [
       {
-        name: "Host Status",
+        name: "主機狀態",
         type: "pie",
         radius: ["45%", "75%"],
+
         label: {
           formatter: "{b}\n{d}%",
         },
+
         data: Object.entries(distribution).map(([name, value]) => ({
-          name,
+          name: statusNameMap[name] ?? name,
           value,
         })),
       },
@@ -45,7 +52,7 @@ const chartOption = computed(() => {
 
 <template>
   <div class="chart-card">
-    <h3>Host Status Distribution</h3>
+    <h3>主機狀態分布</h3>
 
     <VChart class="chart" :option="chartOption" autoresize />
   </div>

@@ -10,15 +10,24 @@ const props = defineProps<{
 
 const topHosts = computed(() =>
   [...props.hosts]
-    .filter((host) => host.diskUsage !== null && host.diskUsage !== undefined)
-    .sort((a, b) => Number(b.diskUsage) - Number(a.diskUsage))
+    .filter(
+      (host) =>
+        host.diskUsage !== null &&
+        host.diskUsage !== undefined
+    )
+    .sort(
+      (a, b) =>
+        Number(b.diskUsage) - Number(a.diskUsage)
+    )
     .slice(0, props.topN ?? 5)
 );
 
 const chartOption = computed(() => ({
   tooltip: {
     trigger: "axis",
-    axisPointer: { type: "shadow" },
+    axisPointer: {
+      type: "shadow",
+    },
     formatter: "{b}: {c}%",
   },
   grid: {
@@ -30,18 +39,24 @@ const chartOption = computed(() => ({
   xAxis: {
     type: "value",
     max: 100,
-    axisLabel: { formatter: "{value}%" },
+    axisLabel: {
+      formatter: "{value}%",
+    },
   },
   yAxis: {
     type: "category",
-    data: topHosts.value.map((host) => host.hostName || host.agentCode),
+    data: topHosts.value.map(
+      (host) => host.hostName || host.agentCode
+    ),
     inverse: true,
   },
   series: [
     {
-      name: "Disk Usage",
+      name: "Disk 使用率",
       type: "bar",
-      data: topHosts.value.map((host) => Number(host.diskUsage ?? 0)),
+      data: topHosts.value.map((host) =>
+        Number(host.diskUsage ?? 0)
+      ),
       barWidth: 18,
     },
   ],
@@ -51,11 +66,11 @@ const chartOption = computed(() => ({
 <template>
   <div class="disk-top-hosts-card">
     <div class="chart-header">
-      <h3>Disk Top {{ topN ?? 5 }} Hosts</h3>
+      <h3>Disk 使用率前 {{ topN ?? 5 }} 名</h3>
     </div>
 
     <div v-if="topHosts.length === 0" class="empty-state">
-      No disk data
+      目前沒有 Disk 資料
     </div>
 
     <VChart v-else class="chart" :option="chartOption" autoresize />

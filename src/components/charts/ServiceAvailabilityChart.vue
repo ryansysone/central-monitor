@@ -16,18 +16,21 @@ const option = computed<EChartsOption>(() => ({
 
   xAxis: {
     type: "category",
-    data: ["Database", "FTP", "Application"],
+    data: ["Database", "FTP", "應用程式"],
   },
 
   yAxis: {
     type: "value",
     min: 0,
     max: 100,
+    axisLabel: {
+      formatter: "{value}%",
+    },
   },
 
   series: [
     {
-      name: "Availability",
+      name: "可用率",
       type: "bar",
       data: [
         props.database,

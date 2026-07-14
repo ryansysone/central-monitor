@@ -71,8 +71,8 @@ const chartOption = computed(() => ({
       return `
         <div>
           <strong>${String(item.name)}</strong><br/>
-          Usage: ${String(item.value)}%<br/>
-          Click to view host detail
+          使用率：${String(item.value)}%<br/>
+          點擊查看主機詳細資訊
         </div>
       `;
     },
@@ -155,23 +155,23 @@ const chartOption = computed(() => ({
       <div class="threshold-legend">
         <span>
           <i class="legend-dot normal"></i>
-          Normal &lt; 75%
+          正常 &lt; 75%
         </span>
 
         <span>
           <i class="legend-dot warning"></i>
-          Warning ≥ 75%
+          警告 ≥ 75%
         </span>
 
         <span>
           <i class="legend-dot critical"></i>
-          Critical ≥ 90%
+          危急 ≥ 90%
         </span>
       </div>
     </div>
 
     <div v-if="topHosts.length === 0" class="empty-state">
-      {{ emptyText ?? "No data" }}
+      {{ emptyText ?? "目前沒有資料" }}
     </div>
 
     <VChart v-else class="chart" :option="chartOption" autoresize @click="handleChartClick" />

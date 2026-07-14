@@ -7,6 +7,13 @@ const props = defineProps<{
   logs: LogItem[];
 }>();
 
+const sourceNameMap: Record<string, string> = {
+  SYSTEM: "系統",
+  AGENT: "Agent",
+  SERVICE: "服務",
+  APPLICATION: "應用程式",
+};
+
 const chartOption = computed(() => {
   const distribution = props.logs.reduce(
     (acc, log) => {
@@ -27,7 +34,7 @@ const chartOption = computed(() => {
 
     series: [
       {
-        name: "Error Distribution",
+        name: "異常來源分布",
         type: "pie",
         radius: ["45%", "75%"],
 
@@ -37,7 +44,7 @@ const chartOption = computed(() => {
 
         data: Object.entries(distribution).map(
           ([name, value]) => ({
-            name,
+            name: sourceNameMap[name] ?? name,
             value,
           })
         ),
@@ -49,7 +56,7 @@ const chartOption = computed(() => {
 
 <template>
   <div class="chart-card">
-    <h3>Error Distribution</h3>
+    <h3>異常來源分布</h3>
 
     <VChart class="chart" :option="chartOption" autoresize />
   </div>

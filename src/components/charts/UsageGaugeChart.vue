@@ -12,7 +12,7 @@ const safeValue = computed(() => props.value ?? 0);
 
 const option = computed<EChartsOption>(() => ({
   tooltip: {
-    formatter: "{a}<br />{b}: {c}%",
+    formatter: "{a}<br/>使用率：{c}%",
   },
 
   series: [

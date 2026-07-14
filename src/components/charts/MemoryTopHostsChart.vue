@@ -10,8 +10,15 @@ const props = defineProps<{
 
 const topHosts = computed(() =>
   [...props.hosts]
-    .filter((host) => host.memoryUsage !== null && host.memoryUsage !== undefined)
-    .sort((a, b) => Number(b.memoryUsage) - Number(a.memoryUsage))
+    .filter(
+      (host) =>
+        host.memoryUsage !== null &&
+        host.memoryUsage !== undefined
+    )
+    .sort(
+      (a, b) =>
+        Number(b.memoryUsage) - Number(a.memoryUsage)
+    )
     .slice(0, props.topN ?? 5)
 );
 
@@ -38,14 +45,18 @@ const chartOption = computed(() => ({
   },
   yAxis: {
     type: "category",
-    data: topHosts.value.map((host) => host.hostName || host.agentCode),
+    data: topHosts.value.map(
+      (host) => host.hostName || host.agentCode
+    ),
     inverse: true,
   },
   series: [
     {
-      name: "Memory Usage",
+      name: "Memory 使用率",
       type: "bar",
-      data: topHosts.value.map((host) => Number(host.memoryUsage ?? 0)),
+      data: topHosts.value.map((host) =>
+        Number(host.memoryUsage ?? 0)
+      ),
       barWidth: 18,
     },
   ],
@@ -55,11 +66,11 @@ const chartOption = computed(() => ({
 <template>
   <div class="memory-top-hosts-card">
     <div class="chart-header">
-      <h3>Memory Top {{ topN ?? 5 }} Hosts</h3>
+      <h3>Memory 使用率前 {{ topN ?? 5 }} 名</h3>
     </div>
 
     <div v-if="topHosts.length === 0" class="empty-state">
-      No memory data
+      目前沒有 Memory 資料
     </div>
 
     <VChart v-else class="chart" :option="chartOption" autoresize />
