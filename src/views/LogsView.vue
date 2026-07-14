@@ -20,7 +20,8 @@ const filteredLogs = computed(() => {
       log.message?.toLowerCase().includes(keyword);
 
     const matchesLevel =
-      selectedLevel.value === "ALL" || log.logLevel === selectedLevel.value;
+      selectedLevel.value === "ALL" ||
+      log.logLevel === selectedLevel.value;
 
     return matchesKeyword && matchesLevel;
   });
@@ -30,7 +31,10 @@ const totalLogCount = computed(() => dashboardStore.logs.length);
 const filteredLogCount = computed(() => filteredLogs.value.length);
 
 const hasActiveLogFilters = computed(() => {
-  return logSearchKeyword.value.trim() !== "" || selectedLevel.value !== "ALL";
+  return (
+    logSearchKeyword.value.trim() !== "" ||
+    selectedLevel.value !== "ALL"
+  );
 });
 
 const resetLogFilters = () => {
@@ -69,58 +73,61 @@ onMounted(() => {
 
 <template>
   <div class="logs-page">
-    <h1>Logs</h1>
+    <h1>系統日誌</h1>
 
     <div class="logs-panel">
       <div class="log-toolbar">
-        <input v-model="logSearchKeyword" type="text" class="log-search-input"
-          placeholder="Search logs by time, agent, level, source, or message" />
+        <input v-model="logSearchKeyword" type="text" class="log-search-input" placeholder="依時間、Agent、等級、來源或訊息搜尋日誌" />
 
         <select v-model="selectedLevel" class="log-level-filter">
-          <option value="ALL">All Levels</option>
+          <option value="ALL">全部等級</option>
           <option value="INFO">INFO</option>
           <option value="WARNING">WARNING</option>
           <option value="ERROR">ERROR</option>
         </select>
 
         <button v-if="hasActiveLogFilters" type="button" class="log-reset-button" @click="resetLogFilters">
-          Reset
+          重設
         </button>
       </div>
 
       <div class="log-count-summary">
-        Showing {{ filteredLogCount }} of {{ totalLogCount }} logs
+        顯示 {{ filteredLogCount }} 筆，共 {{ totalLogCount }} 筆日誌
       </div>
 
       <div v-if="filteredLogs.length === 0" class="logs-empty-state">
-        No logs found.
+        找不到符合條件的日誌。
       </div>
 
       <table v-else class="logs-table">
         <thead>
           <tr>
-            <th>Time</th>
+            <th>時間</th>
             <th>Agent</th>
-            <th>Level</th>
-            <th>Source</th>
-            <th>Message</th>
+            <th>等級</th>
+            <th>來源</th>
+            <th>訊息</th>
           </tr>
         </thead>
 
         <tbody>
           <tr v-for="log in filteredLogs" :key="log.id" :class="getLogRowClass(log.logLevel)">
             <td>{{ formatLogTime(log.loggedAt) }}</td>
+
             <td>{{ log.agentCode }}</td>
+
             <td>
               <span :class="getLogLevelClass(log.logLevel)">
                 {{ log.logLevel }}
               </span>
             </td>
+
             <td>
               <span :class="getLogSourceClass(log.sourceType)">
                 {{ log.sourceType }}
               </span>
             </td>
+
             <td>{{ log.message }}</td>
           </tr>
         </tbody>
