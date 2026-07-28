@@ -24,6 +24,12 @@ const router = createRouter({
           props: true,
         },
         {
+          path: "host/:agentCode/logs",
+          name: "agent-logs",
+          component: () => import("../views/AgentLogsView.vue"),
+          props: true,
+        },
+        {
           path: "hosts",
           component: HostsView,
         },

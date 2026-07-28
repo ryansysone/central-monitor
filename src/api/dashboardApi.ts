@@ -1,5 +1,6 @@
 import type {
   AgentDashboardItem,
+  AgentDetail,
   DashboardSummary,
   LogItem,
   HostDetail,
@@ -44,11 +45,35 @@ export async function fetchDashboardAgents(): Promise<AgentDashboardItem[]> {
   return result.data ?? [];
 }
 
+export async function fetchAgentByCode(agentCode: string): Promise<AgentDetail> {
+  const response = await fetch(`${BASE_URL}/api/agents/${encodeURIComponent(agentCode)}`);
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch agent");
+  }
+
+  const result: ApiResponse<AgentDetail> = await response.json();
+
+  return result.data;
+}
+
 export async function fetchRecentLogs(limit = 30): Promise<LogItem[]> {
   const response = await fetch(`${BASE_URL}/api/logs/recent?limit=${limit}`);
 
   if (!response.ok) {
     throw new Error("Failed to fetch recent logs");
+  }
+
+  const result: ApiResponse<LogItem[]> = await response.json();
+
+  return result.data ?? [];
+}
+
+export async function fetchLogsByAgentId(agentId: number): Promise<LogItem[]> {
+  const response = await fetch(`${BASE_URL}/api/logs/agent/${agentId}`);
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch agent logs");
   }
 
   const result: ApiResponse<LogItem[]> = await response.json();

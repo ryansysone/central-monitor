@@ -17,6 +17,16 @@ export interface AgentDashboardItem {
   applicationStatus: string | null;
 }
 
+export interface AgentDetail {
+  id: number;
+  agentCode: string;
+  hostName: string;
+  ipAddress: string;
+  osName: string;
+  status: string;
+  lastSeenAt: string | null;
+}
+
 export interface LogItem {
   id: number;
   agentCode: string;

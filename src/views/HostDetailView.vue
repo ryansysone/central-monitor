@@ -124,6 +124,15 @@ function goBack() {
   router.push("/");
 }
 
+function goToAgentLogs() {
+  router.push({
+    name: "agent-logs",
+    params: {
+      agentCode,
+    },
+  });
+}
+
 onMounted(() => {
   loadHost();
 
@@ -163,9 +172,16 @@ onUnmounted(() => {
           <p class="host-name">{{ host.hostName }}</p>
         </div>
 
-        <span :class="['status-badge', host.status.toLowerCase()]">
-          {{ host.status }}
-        </span>
+        <div class="host-actions">
+          <button class="logs-btn" @click="goToAgentLogs">
+            查看此 Agent 日誌
+          </button>
+
+          <span :class="['status-badge', host.status.toLowerCase()]">
+            {{ host.status }}
+          </span>
+        </div>
+
       </div>
 
       <div class="card-grid">
@@ -486,5 +502,33 @@ onUnmounted(() => {
 
 .gauge-card {
   padding-bottom: 8px;
+}
+
+.host-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logs-btn {
+  cursor: pointer;
+  border: 1px solid var(--primary-color);
+  background: var(--panel-bg);
+  color: var(--primary-color);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-weight: 600;
+}
+
+.logs-btn:hover {
+  background: var(--primary-color);
+  color: #ffffff;
+}
+
+@media (max-width: 768px) {
+  .host-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
 }
 </style>

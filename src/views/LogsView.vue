@@ -7,13 +7,59 @@ const dashboardStore = useDashboardStore();
 const logSearchKeyword = ref("");
 const selectedLevel = ref("ALL");
 
+const formatLogTime = (loggedAt: string) => {
+  if (!loggedAt) return "-";
+
+  const date = new Date(loggedAt);
+
+  if (Number.isNaN(date.getTime())) {
+    return loggedAt;
+  }
+
+  return date.toLocaleString();
+};
+
+/**
+ * 支援搜尋：
+ * 1. API 原始時間
+ * 2. yyyy-MM-dd HH:mm:ss
+ * 3. toLocaleString() 顯示格式
+ */
+const formatLogTimeForSearch = (loggedAt: string): string => {
+  if (!loggedAt) return "";
+
+  const date = new Date(loggedAt);
+
+  if (Number.isNaN(date.getTime())) {
+    return loggedAt.toLowerCase();
+  }
+
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+  const ss = String(date.getSeconds()).padStart(2, "0");
+
+  const fixedFormat = `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+  const displayFormat = date.toLocaleString();
+
+  return [
+    loggedAt,
+    fixedFormat,
+    displayFormat,
+  ]
+    .join(" ")
+    .toLowerCase();
+};
+
 const filteredLogs = computed(() => {
   const keyword = logSearchKeyword.value.trim().toLowerCase();
 
   return dashboardStore.logs.filter((log) => {
     const matchesKeyword =
       !keyword ||
-      log.loggedAt?.toLowerCase().includes(keyword) ||
+      formatLogTimeForSearch(log.loggedAt).includes(keyword) ||
       log.agentCode?.toLowerCase().includes(keyword) ||
       log.logLevel?.toLowerCase().includes(keyword) ||
       log.sourceType?.toLowerCase().includes(keyword) ||
@@ -28,6 +74,7 @@ const filteredLogs = computed(() => {
 });
 
 const totalLogCount = computed(() => dashboardStore.logs.length);
+
 const filteredLogCount = computed(() => filteredLogs.value.length);
 
 const hasActiveLogFilters = computed(() => {
@@ -40,18 +87,6 @@ const hasActiveLogFilters = computed(() => {
 const resetLogFilters = () => {
   logSearchKeyword.value = "";
   selectedLevel.value = "ALL";
-};
-
-const formatLogTime = (loggedAt: string) => {
-  if (!loggedAt) return "-";
-
-  const date = new Date(loggedAt);
-
-  if (Number.isNaN(date.getTime())) {
-    return loggedAt;
-  }
-
-  return date.toLocaleString();
 };
 
 const getLogLevelClass = (level: string) => {
