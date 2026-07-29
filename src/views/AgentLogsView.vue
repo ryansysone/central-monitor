@@ -4,7 +4,7 @@ import { useRoute, useRouter } from "vue-router";
 
 import {
   fetchAgentByCode,
-  fetchLogsByAgentId,
+  searchAgentLogs,
 } from "../api/dashboardApi";
 
 import type {
@@ -19,13 +19,71 @@ const agentCode = route.params.agentCode as string;
 
 const loading = ref(true);
 const error = ref("");
+
 const agent = ref<AgentDetail | null>(null);
+
+/*
+ * logs 現在只保存後端回傳的「目前頁面」資料。
+ */
 const logs = ref<LogItem[]>([]);
+
 const keyword = ref("");
 const selectedLevel = ref("ALL");
 const selectedSource = ref("ALL");
 const startDate = ref("");
 const endDate = ref("");
+
+/*
+ * 真正已套用到後端查詢的條件。
+ *
+ * 使用者修改畫面上的篩選條件時，
+ * 不會立刻影響目前查詢結果。
+ *
+ * 只有按下「查詢」後，
+ * 才會把畫面條件複製到這裡。
+ */
+const appliedKeyword = ref("");
+const appliedLevel = ref("ALL");
+const appliedSource = ref("ALL");
+const appliedStartDate = ref("");
+const appliedEndDate = ref("");
+
+/*
+ * 前端頁碼從 1 開始。
+ * 後端頁碼從 0 開始。
+ */
+const currentPage = ref(1);
+const pageSize = 20;
+
+const totalElements = ref(0);
+const totalPages = ref(1);
+const hasNext = ref(false);
+const hasPrevious = ref(false);
+
+/*
+ * 用來避免較舊的 API 回應覆蓋較新的結果。
+ */
+let latestRequestId = 0;
+
+const hasInputFilters = computed(() => {
+  return (
+    keyword.value.trim() !== "" ||
+    selectedLevel.value !== "ALL" ||
+    selectedSource.value !== "ALL" ||
+    startDate.value !== "" ||
+    endDate.value !== ""
+  );
+});
+
+const hasAppliedFilters = computed(() => {
+  return (
+    appliedKeyword.value !== "" ||
+    appliedLevel.value !== "ALL" ||
+    appliedSource.value !== "ALL" ||
+    appliedStartDate.value !== "" ||
+    appliedEndDate.value !== ""
+  );
+});
 
 function formatLogTime(loggedAt: string) {
   if (!loggedAt) {
@@ -45,52 +103,101 @@ function getLogLevelClass(level: string) {
   return `log-level-badge log-level-${level.toLowerCase()}`;
 }
 
-function getLogSourceClass(sourceType: string) {
-  return `log-source-badge log-source-${sourceType.toLowerCase()}`;
-}
 
 function getLogRowClass(level: string) {
   return `log-row log-row-${level.toLowerCase()}`;
 }
 
-const filteredLogs = computed(() => {
-  const normalizedKeyword = keyword.value.trim().toLowerCase();
+/*
+ * 呼叫後端分頁查詢 API。
+ *
+ * 篩選、排序、分頁全部由後端與資料庫處理。
+ */
+async function loadLogs() {
+  if (!agent.value) {
+    return;
+  }
 
-  return logs.value.filter((log) => {
-    const matchesKeyword =
-      !normalizedKeyword ||
-      (log.message ?? "").toLowerCase().includes(normalizedKeyword);
+  const requestId = ++latestRequestId;
 
-    const matchesLevel =
-      selectedLevel.value === "ALL" ||
-      log.logLevel?.toUpperCase() === selectedLevel.value;
+  loading.value = true;
+  error.value = "";
 
-    const matchesSource =
-      selectedSource.value === "ALL" ||
-      log.sourceType?.toUpperCase() === selectedSource.value;
+  try {
+    const result = await searchAgentLogs({
+      agentId: agent.value.id,
 
-    const loggedDate = new Date(log.loggedAt);
+      keyword:
+        appliedKeyword.value !== ""
+          ? appliedKeyword.value
+          : undefined,
 
-    const matchesStartDate =
-      !startDate.value ||
-      (!Number.isNaN(loggedDate.getTime()) &&
-        loggedDate >= new Date(`${startDate.value}T00:00:00`));
+      logLevel:
+        appliedLevel.value !== "ALL"
+          ? appliedLevel.value
+          : undefined,
 
-    const matchesEndDate =
-      !endDate.value ||
-      (!Number.isNaN(loggedDate.getTime()) &&
-        loggedDate <= new Date(`${endDate.value}T23:59:59.999`));
+      sourceType:
+        appliedSource.value !== "ALL"
+          ? appliedSource.value
+          : undefined,
 
-    return (
-      matchesKeyword &&
-      matchesLevel &&
-      matchesSource &&
-      matchesStartDate &&
-      matchesEndDate
-    );
-  });
-});
+      startDate:
+        appliedStartDate.value !== ""
+          ? appliedStartDate.value
+          : undefined,
 
+      endDate:
+        appliedEndDate.value !== ""
+          ? appliedEndDate.value
+          : undefined,
+
+      /*
+       * 前端第 1 頁對應後端第 0 頁。
+       */
+      page: currentPage.value - 1,
+      size: pageSize,
+    });
+
+    /*
+     * 若已有更新的請求，就忽略這次舊回應。
+     */
+    if (requestId !== latestRequestId) {
+      return;
+    }
+
+    logs.value = result.content ?? [];
+    totalElements.value = result.totalElements ?? 0;
+    totalPages.value = Math.max(1, result.totalPages ?? 0);
+    hasNext.value = result.hasNext ?? false;
+    hasPrevious.value = result.hasPrevious ?? false;
+  } catch (err) {
+    if (requestId !== latestRequestId) {
+      return;
+    }
+
+    console.error("Failed to load agent logs", err);
+
+    error.value = "無法載入此 Agent 的日誌";
+    logs.value = [];
+    totalElements.value = 0;
+    totalPages.value = 1;
+    hasNext.value = false;
+    hasPrevious.value = false;
+  } finally {
+    if (requestId === latestRequestId) {
+      loading.value = false;
+    }
+  }
+}
+
+/*
+ * 初次進入頁面：
+ *
+ * 1. 透過 agentCode 查詢 Agent
+ * 2. 取得 Agent ID
+ * 3. 查詢第一頁 Log
+ */
 async function loadAgentLogs() {
   loading.value = true;
   error.value = "";
@@ -98,20 +205,84 @@ async function loadAgentLogs() {
   try {
     agent.value = await fetchAgentByCode(agentCode);
 
-    const agentLogs = await fetchLogsByAgentId(agent.value.id);
-
-    logs.value = [...agentLogs].sort(
-      (a, b) =>
-        new Date(b.loggedAt).getTime() -
-        new Date(a.loggedAt).getTime(),
-    );
+    await loadLogs();
   } catch (err) {
     console.error("Failed to load agent logs", err);
+
     error.value = "無法載入此 Agent 的日誌";
+    agent.value = null;
     logs.value = [];
-  } finally {
+    totalElements.value = 0;
+    totalPages.value = 1;
+    hasNext.value = false;
+    hasPrevious.value = false;
     loading.value = false;
   }
+}
+
+/*
+ * 套用目前畫面上的篩選條件並執行查詢。
+ */
+async function searchLogs() {
+  if (loading.value) {
+    return;
+  }
+
+  appliedKeyword.value = keyword.value.trim();
+  appliedLevel.value = selectedLevel.value;
+  appliedSource.value = selectedSource.value;
+  appliedStartDate.value = startDate.value;
+  appliedEndDate.value = endDate.value;
+
+  currentPage.value = 1;
+
+  await loadLogs();
+}
+
+/*
+ * 清除畫面條件與已套用條件，
+ * 並重新查詢全部日誌。
+ */
+async function clearFilters() {
+  if (loading.value) {
+    return;
+  }
+
+  keyword.value = "";
+  selectedLevel.value = "ALL";
+  selectedSource.value = "ALL";
+  startDate.value = "";
+  endDate.value = "";
+
+  appliedKeyword.value = "";
+  appliedLevel.value = "ALL";
+  appliedSource.value = "ALL";
+  appliedStartDate.value = "";
+  appliedEndDate.value = "";
+
+  currentPage.value = 1;
+
+  await loadLogs();
+}
+
+async function goToPreviousPage() {
+  if (!hasPrevious.value || currentPage.value <= 1) {
+    return;
+  }
+
+  currentPage.value--;
+
+  await loadLogs();
+}
+
+async function goToNextPage() {
+  if (!hasNext.value || currentPage.value >= totalPages.value) {
+    return;
+  }
+
+  currentPage.value++;
+
+  await loadLogs();
 }
 
 function goBack() {
@@ -123,9 +294,11 @@ function goBack() {
   });
 }
 
+
 onMounted(() => {
   loadAgentLogs();
 });
+
 </script>
 
 <template>
@@ -167,46 +340,62 @@ onMounted(() => {
     </div>
 
     <div v-else class="logs-panel">
+
+
       <div class="logs-toolbar">
-        <input v-model="keyword" type="search" class="log-search-input" placeholder="搜尋日誌訊息" />
+        <input v-model="keyword" type="search" class="log-search-input" placeholder="搜尋日誌訊息"
+          @keyup.enter="searchLogs" />
 
         <div class="log-date-field">
           <label for="start-date">開始日期</label>
 
-          <input id="start-date" v-model="startDate" type="date" class="log-date-input" />
+          <input id="start-date" v-model="startDate" type="date" class="log-date-input" :max="endDate || undefined" />
         </div>
 
         <div class="log-date-field">
           <label for="end-date">結束日期</label>
 
-          <input id="end-date" v-model="endDate" type="date" class="log-date-input" />
+          <input id="end-date" v-model="endDate" type="date" class="log-date-input" :min="startDate || undefined" />
         </div>
 
+        <!-- 等級種類 -->
         <select v-model="selectedLevel" class="log-filter-select">
           <option value="ALL">全部等級</option>
           <option value="INFO">INFO</option>
-          <option value="WARNING">WARNING</option>
+          <option value="WARN">WARNING</option>
           <option value="ERROR">ERROR</option>
         </select>
 
+        <!-- 來源種類 -->
         <select v-model="selectedSource" class="log-filter-select">
           <option value="ALL">全部來源</option>
           <option value="SYSTEM">SYSTEM</option>
-          <option value="AGENT">AGENT</option>
-          <option value="SERVICE">SERVICE</option>
           <option value="APPLICATION">APPLICATION</option>
+          <option value="DATABASE">DATABASE</option>
+          <option value="FTP">FTP</option>
+          <option value="SFTP">SFTP</option>
+          <option value="SECURITY">SECURITY</option>
         </select>
 
+        <button type="button" class="search-filter-btn" :disabled="loading" @click="searchLogs">
+          查詢
+        </button>
+        <button type="button" class="clear-filter-btn" :disabled="loading || (!hasInputFilters && !hasAppliedFilters)"
+          @click="clearFilters">
+          清除篩選
+        </button>
 
       </div>
+
+
       <div class="log-count-summary">
-        顯示 {{ filteredLogs.length }} 筆，共 {{ logs.length }} 筆日誌
+        本頁顯示 {{ logs.length }} 筆，共 {{ totalElements }} 筆日誌
       </div>
 
-      <div v-if="filteredLogs.length === 0" class="logs-empty-state">
+      <div v-if="logs.length === 0" class="logs-empty-state">
         <div class="empty-state-icon">⌕</div>
 
-        <template v-if="logs.length === 0">
+        <template v-if="!hasAppliedFilters">
           <h2>目前沒有日誌紀錄</h2>
 
           <p>
@@ -218,7 +407,7 @@ onMounted(() => {
           <h2>查無符合條件的日誌</h2>
 
           <p>
-            請調整關鍵字、等級或來源篩選條件。
+            請調整關鍵字、等級、來源或日期篩選條件。
           </p>
         </template>
       </div>
@@ -235,7 +424,7 @@ onMounted(() => {
         </thead>
 
         <tbody>
-          <tr v-for="log in filteredLogs" :key="log.id" :class="getLogRowClass(log.logLevel)">
+          <tr v-for="log in logs" :key="log.id" :class="getLogRowClass(log.logLevel)">
             <td>{{ formatLogTime(log.loggedAt) }}</td>
 
             <td>{{ log.agentCode }}</td>
@@ -247,7 +436,7 @@ onMounted(() => {
             </td>
 
             <td>
-              <span :class="getLogSourceClass(log.sourceType)">
+              <span class="log-source-badge">
                 {{ log.sourceType }}
               </span>
             </td>
@@ -256,6 +445,21 @@ onMounted(() => {
           </tr>
         </tbody>
       </table>
+
+      <div v-if="totalElements > 0" class="logs-pagination">
+        <button type="button" class="pagination-btn" :disabled="!hasPrevious" @click="goToPreviousPage">
+          上一頁
+        </button>
+
+        <span class="pagination-summary">
+          第 {{ currentPage }} 頁，共 {{ totalPages }} 頁
+        </span>
+
+        <button type="button" class="pagination-btn" :disabled="!hasNext" @click="goToNextPage">
+          下一頁
+        </button>
+      </div>
+
     </div>
   </div>
 </template>
@@ -435,6 +639,31 @@ onMounted(() => {
   border-color: var(--primary-color);
 }
 
+.clear-filter-btn {
+  cursor: pointer;
+  padding: 10px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-main);
+  font-size: 15px;
+}
+
+.clear-filter-btn:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.clear-filter-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.clear-filter-btn:disabled:hover {
+  border-color: var(--border-color);
+  color: var(--text-main);
+}
+
 .log-search-input {
   width: 100%;
   max-width: 420px;
@@ -511,7 +740,7 @@ onMounted(() => {
   background: rgba(220, 38, 38, 0.08);
 }
 
-.log-row-warning {
+.log-row-warn {
   background: rgba(245, 158, 11, 0.08);
 }
 
@@ -521,48 +750,85 @@ onMounted(() => {
 
 .log-level-badge,
 .log-source-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 72px;
-  padding: 4px 10px;
-  border-radius: 999px;
+  display: inline;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
   font-size: 15px;
-  font-weight: 700;
+  cursor: default;
+}
+
+.log-level-badge {
+  font-weight: 600;
 }
 
 .log-level-info {
   color: #2563eb;
-  background: #dbeafe;
 }
 
-.log-level-warning {
+.log-level-warn {
   color: #b45309;
-  background: #fef3c7;
 }
 
 .log-level-error {
   color: #dc2626;
-  background: #fee2e2;
 }
 
-.log-source-system {
-  color: #334155;
-  background: #e2e8f0;
+.log-source-badge {
+  color: var(--text-muted);
+  font-weight: 500;
 }
 
-.log-source-agent {
-  color: #047857;
-  background: #d1fae5;
+.logs-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 20px;
 }
 
-.log-source-service {
-  color: #7c3aed;
-  background: #ede9fe;
+.pagination-btn {
+  cursor: pointer;
+  padding: 8px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-main);
+  font-size: 15px;
 }
 
-.log-source-application {
-  color: #c2410c;
-  background: #ffedd5;
+.pagination-btn:hover:not(:disabled) {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.pagination-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.pagination-summary {
+  color: var(--text-muted);
+  font-size: 15px;
+}
+
+.search-filter-btn {
+  cursor: pointer;
+  padding: 10px 16px;
+  border: 1px solid var(--primary-color);
+  border-radius: 8px;
+  background: var(--primary-color);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.search-filter-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.search-filter-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 </style>

@@ -14,6 +14,29 @@ interface ApiResponse<T> {
   data: T;
 }
 
+export interface PageResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}
+
+export interface SearchAgentLogsParams {
+  agentId: number;
+  keyword?: string;
+  logLevel?: string;
+  sourceType?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  size?: number;
+}
+
 const BASE_URL = "http://localhost:9090";
 
 export async function fetchDashboardSummary(): Promise<DashboardSummary> {
@@ -79,6 +102,47 @@ export async function fetchLogsByAgentId(agentId: number): Promise<LogItem[]> {
   const result: ApiResponse<LogItem[]> = await response.json();
 
   return result.data ?? [];
+}
+
+export async function searchAgentLogs(
+  params: SearchAgentLogsParams,
+): Promise<PageResponse<LogItem>> {
+  const query = new URLSearchParams();
+
+  if (params.keyword) {
+    query.append("keyword", params.keyword);
+  }
+
+  if (params.logLevel) {
+    query.append("logLevel", params.logLevel);
+  }
+
+  if (params.sourceType) {
+    query.append("sourceType", params.sourceType);
+  }
+
+  if (params.startDate) {
+    query.append("startDate", params.startDate);
+  }
+
+  if (params.endDate) {
+    query.append("endDate", params.endDate);
+  }
+
+  query.append("page", String(params.page ?? 0));
+  query.append("size", String(params.size ?? 20));
+
+  const response = await fetch(
+    `${BASE_URL}/api/logs/agent/${params.agentId}/search?${query.toString()}`,
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to search agent logs");
+  }
+
+  const result: ApiResponse<PageResponse<LogItem>> = await response.json();
+
+  return result.data;
 }
 
 export async function fetchHostDetail(agentCode: string): Promise<HostDetail> {

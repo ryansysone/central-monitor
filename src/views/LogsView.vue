@@ -93,9 +93,6 @@ const getLogLevelClass = (level: string) => {
   return `log-level-badge log-level-${level.toLowerCase()}`;
 };
 
-const getLogSourceClass = (sourceType: string) => {
-  return `log-source-badge log-source-${sourceType.toLowerCase()}`;
-};
 
 const getLogRowClass = (level: string) => {
   return `log-row log-row-${level.toLowerCase()}`;
@@ -104,9 +101,11 @@ const getLogRowClass = (level: string) => {
 onMounted(() => {
   dashboardStore.loadDashboard();
 });
+
 </script>
 
 <template>
+
   <div class="logs-page">
     <h1>系統日誌</h1>
 
@@ -117,7 +116,7 @@ onMounted(() => {
         <select v-model="selectedLevel" class="log-level-filter">
           <option value="ALL">全部等級</option>
           <option value="INFO">INFO</option>
-          <option value="WARNING">WARNING</option>
+          <option value="WARN">WARN</option>
           <option value="ERROR">ERROR</option>
         </select>
 
@@ -158,7 +157,7 @@ onMounted(() => {
             </td>
 
             <td>
-              <span :class="getLogSourceClass(log.sourceType)">
+              <span class="log-source-badge">
                 {{ log.sourceType }}
               </span>
             </td>
@@ -166,9 +165,11 @@ onMounted(() => {
             <td>{{ log.message }}</td>
           </tr>
         </tbody>
+
       </table>
     </div>
   </div>
+
 </template>
 
 <style scoped>
@@ -275,7 +276,7 @@ onMounted(() => {
   background: rgba(220, 38, 38, 0.08);
 }
 
-.log-row-warning {
+.log-row-warn {
   background: rgba(245, 158, 11, 0.08);
 }
 
@@ -285,48 +286,32 @@ onMounted(() => {
 
 .log-level-badge,
 .log-source-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 72px;
-  padding: 4px 10px;
-  border-radius: 999px;
+  display: inline;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
   font-size: 15px;
-  font-weight: 700;
+  cursor: default;
+}
+
+.log-level-badge {
+  font-weight: 600;
 }
 
 .log-level-info {
   color: #2563eb;
-  background: #dbeafe;
 }
 
-.log-level-warning {
+.log-level-warn {
   color: #b45309;
-  background: #fef3c7;
 }
 
 .log-level-error {
   color: #dc2626;
-  background: #fee2e2;
 }
 
-.log-source-system {
-  color: #334155;
-  background: #e2e8f0;
-}
-
-.log-source-agent {
-  color: #047857;
-  background: #d1fae5;
-}
-
-.log-source-service {
-  color: #7c3aed;
-  background: #ede9fe;
-}
-
-.log-source-application {
-  color: #c2410c;
-  background: #ffedd5;
+.log-source-badge {
+  color: var(--text-muted);
+  font-weight: 500;
 }
 </style>
