@@ -2,15 +2,18 @@
 import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
+import { fetchAgentByCode } from "../api/agentApi";
+
 import {
-  fetchAgentByCode,
   searchAgentLogs,
-} from "../api/dashboardApi";
+} from "../api/logApi";
+
+import type { AgentDetail } from "../types/agent";
 
 import type {
-  AgentDetail,
   LogItem,
 } from "../types/dashboard";
+
 
 const route = useRoute();
 const router = useRouter();

@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import MainLayout from "../layouts/MainLayout.vue";
 import HostsView from "../views/HostsView.vue";
 import AlertsView from "../views/AlertsView.vue";
-import LogsView from "../views/LogsView.vue";
+import SystemLogsView from "../views/SystemLogsView.vue";
 import SettingsView from "../views/SettingsView.vue";
 
 const router = createRouter({
@@ -39,7 +39,8 @@ const router = createRouter({
         },
         {
           path: "logs",
-          component: LogsView,
+          name: "system-logs",
+          component: SystemLogsView,
         },
         {
           path: "settings",
