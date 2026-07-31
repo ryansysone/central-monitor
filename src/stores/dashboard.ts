@@ -11,6 +11,9 @@ interface DashboardState {
   agents: AgentDashboardItem[];
   logs: LogItem[];
   loading: boolean;
+  refreshing: boolean;
+  initialized: boolean;
+  lastUpdated: Date | null;
   error: string;
   websocket: WebSocket | null;
   connectionStatus: WebSocketConnectionStatus;
@@ -29,6 +32,9 @@ export const useDashboardStore = defineStore("dashboard", {
     logs: [],
 
     loading: false,
+    refreshing: false,
+    initialized: false,
+    lastUpdated: null,
     error: "",
 
     websocket: null,
@@ -37,7 +43,23 @@ export const useDashboardStore = defineStore("dashboard", {
 
   actions: {
     async loadDashboard() {
-      this.loading = true;
+      if (this.loading || this.refreshing) {
+        return;
+      }
+      const isInitialLoad = !this.initialized;
+
+      if (isInitialLoad) {
+        this.loading = true;
+      } else {
+        this.refreshing = true;
+      }
+
+      if (isInitialLoad) {
+        this.loading = true;
+      } else {
+        this.refreshing = true;
+      }
+
       this.error = "";
 
       try {
@@ -50,11 +72,14 @@ export const useDashboardStore = defineStore("dashboard", {
         this.summary = summaryData;
         this.agents = agentsData;
         this.logs = logsData;
+        this.initialized = true;
+        this.lastUpdated = new Date();
       } catch (error) {
         console.error("Failed to load dashboard data:", error);
-        this.error = "Failed to load dashboard data";
+        this.error = "儀表板資料更新失敗，目前顯示上一次成功取得的資料";
       } finally {
         this.loading = false;
+        this.refreshing = false;
       }
     },
 
@@ -75,6 +100,11 @@ export const useDashboardStore = defineStore("dashboard", {
 
       ws.onmessage = (message) => {
         console.log("Dashboard websocket update", message.data);
+
+        if (message.data === "dashboard-updated") {
+          this.loadDashboard();
+          return;
+        }
 
         try {
           const event = JSON.parse(message.data);

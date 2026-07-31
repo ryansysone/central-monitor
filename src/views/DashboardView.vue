@@ -16,8 +16,6 @@ const dashboardStore = useDashboardStore();
 const themeStore = useThemeStore();
 const router = useRouter();
 
-const lastUpdatedAt = ref<string>("--");
-
 const searchKeyword = ref(
   localStorage.getItem("dashboardSearchKeyword") ?? ""
 );
@@ -134,7 +132,6 @@ let refreshTimer: number | undefined;
 
 async function refreshDashboard() {
   await dashboardStore.loadDashboard();
-  lastUpdatedAt.value = new Date().toLocaleString();
 }
 
 function goToHostDetail(agentCode: string) {
@@ -231,9 +228,13 @@ watch(searchKeyword, (value) => {
 });
 
 onMounted(() => {
+  autoRefreshSeconds.value = Number(
+    localStorage.getItem("autoRefreshSeconds") || 30
+  );
+
   refreshDashboard();
 
-  //dashboardStore.connectWebSocket();
+  dashboardStore.connectWebSocket();
 
   refreshTimer = window.setInterval(() => {
     refreshDashboard();
@@ -246,6 +247,10 @@ onUnmounted(() => {
   }
 
   dashboardStore.disconnectWebSocket();
+});
+
+watch(searchKeyword, (value) => {
+  localStorage.setItem("dashboardSearchKeyword", value);
 });
 </script>
 
@@ -270,13 +275,19 @@ onUnmounted(() => {
           </span> -->
         </div>
 
-        <p class="last-updated">
-          最後更新: {{ lastUpdatedAt }}
-        </p>
-
         <p class="auto-refresh">
           自動更新：開啟（{{ autoRefreshSeconds }} 秒）
+
+          <span v-if="dashboardStore.refreshing">
+            ・背景更新中...
+          </span>
+
+          <span v-else-if="dashboardStore.lastUpdated">
+            ・最後更新：
+            {{ dashboardStore.lastUpdated.toLocaleTimeString("zh-TW") }}
+          </span>
         </p>
+
       </div>
 
       <div class="header-actions">
@@ -288,12 +299,14 @@ onUnmounted(() => {
           <span class="connection-dot"></span>
           <span>{{ connectionStatusLabel }}</span>
         </div> -->
-        <button class="export-button" :disabled="dashboardStore.loading" @click="exportReport">
+        <button class="export-button" :disabled="dashboardStore.loading || dashboardStore.refreshing"
+          @click="exportReport">
           匯出報表
         </button>
 
-        <button class="refresh-button" :disabled="dashboardStore.loading" @click="refreshDashboard">
-          重新整理
+        <button class="refresh-button" :disabled="dashboardStore.loading || dashboardStore.refreshing"
+          @click="refreshDashboard">
+          {{ dashboardStore.refreshing ? "更新中..." : "重新整理" }}
         </button>
       </div>
     </header>
@@ -302,19 +315,20 @@ onUnmounted(() => {
       正在載入儀表板...
     </div>
 
-    <div v-else-if="dashboardStore.error" class="status-message error">
-      {{ dashboardStore.error }}
-    </div>
 
     <template v-else>
+      <div v-if="dashboardStore.error" class="status-message error">
+        {{ dashboardStore.error }}
+      </div>
+
       <section class="summary-grid">
         <SummaryCard title="總主機數" :value="dashboardStore.summary.totalAgents" />
 
-        <SummaryCard title="在線" :value="dashboardStore.summary.onlineAgents" />
+        <SummaryCard title="正常" :value="dashboardStore.summary.onlineAgents" />
 
-        <SummaryCard title="離線" :value="dashboardStore.summary.offlineAgents" />
+        <SummaryCard title="異常" :value="dashboardStore.summary.offlineAgents" />
 
-        <SummaryCard title="異常" :value="dashboardStore.summary.errorCount" />
+        <SummaryCard title="錯誤事件" :value="dashboardStore.summary.errorCount" />
       </section>
 
       <section class="service-status-grid">

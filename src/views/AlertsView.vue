@@ -1,71 +1,89 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useDashboardStore } from "../stores/dashboard";
 
 const dashboardStore = useDashboardStore();
 const selectedFilter = ref("ALL");
+const searchKeyword = ref("");
+
+const autoRefreshSeconds = ref(
+  Number(localStorage.getItem("autoRefreshSeconds") || 30)
+);
+
+let refreshTimer: number | undefined;
 
 onMounted(() => {
+  autoRefreshSeconds.value = Number(
+    localStorage.getItem("autoRefreshSeconds") || 30
+  );
+
   dashboardStore.loadDashboard();
+
+  refreshTimer = window.setInterval(() => {
+    dashboardStore.loadDashboard();
+  }, autoRefreshSeconds.value * 1000);
+});
+
+onUnmounted(() => {
+  if (refreshTimer) {
+    clearInterval(refreshTimer);
+  }
 });
 
 const criticalAlerts = computed(() => {
-  return dashboardStore.agents.filter((agent) => {
-    return (
-      agent.status === "OFFLINE" ||
-      agent.databaseStatus === "DOWN" ||
-      agent.ftpStatus === "DOWN" ||
-      agent.applicationStatus === "DOWN"
-    );
-  });
+  return dashboardStore.agents.filter((agent) => isCritical(agent));
 });
 
 const warningAlerts = computed(() => {
   return dashboardStore.agents.filter((agent) => {
-    return (
-      (agent.cpuUsage ?? 0) >= 80 ||
-      (agent.memoryUsage ?? 0) >= 80 ||
-      (agent.diskUsage ?? 0) >= 80
-    );
+    return !isCritical(agent) && isWarning(agent);
   });
 });
 
 const healthyHosts = computed(() => {
   return dashboardStore.agents.filter((agent) => {
-    return (
-      agent.status === "ONLINE" &&
-      agent.databaseStatus !== "DOWN" &&
-      agent.ftpStatus !== "DOWN" &&
-      agent.applicationStatus !== "DOWN"
-    );
+    return !isCritical(agent) && !isWarning(agent);
   });
 });
 
 const filteredAlerts = computed(() => {
+  let alerts;
+
   if (selectedFilter.value === "CRITICAL") {
-    return criticalAlerts.value.map((agent) => ({
+    alerts = criticalAlerts.value.map((agent) => ({
       type: "CRITICAL",
       agent,
     }));
-  }
-
-  if (selectedFilter.value === "WARNING") {
-    return warningAlerts.value.map((agent) => ({
+  } else if (selectedFilter.value === "WARNING") {
+    alerts = warningAlerts.value.map((agent) => ({
       type: "WARNING",
       agent,
     }));
+  } else {
+    alerts = [
+      ...criticalAlerts.value.map((agent) => ({
+        type: "CRITICAL",
+        agent,
+      })),
+      ...warningAlerts.value.map((agent) => ({
+        type: "WARNING",
+        agent,
+      })),
+    ];
   }
 
-  return [
-    ...criticalAlerts.value.map((agent) => ({
-      type: "CRITICAL",
-      agent,
-    })),
-    ...warningAlerts.value.map((agent) => ({
-      type: "WARNING",
-      agent,
-    })),
-  ];
+  const keyword = searchKeyword.value.trim().toLowerCase();
+
+  if (!keyword) {
+    return alerts;
+  }
+
+  return alerts.filter((item) => {
+    return (
+      item.agent.agentCode.toLowerCase().includes(keyword) ||
+      (item.agent.hostName ?? "").toLowerCase().includes(keyword)
+    );
+  });
 });
 
 const selectedAgentCode = ref<string | null>(null);
@@ -85,6 +103,23 @@ function getSeverityClass(type: string) {
   return "severity-info";
 }
 
+function isCritical(agent: (typeof dashboardStore.agents)[number]) {
+  return (
+    agent.status === "OFFLINE" ||
+    agent.databaseStatus === "DOWN" ||
+    agent.ftpStatus === "DOWN" ||
+    agent.applicationStatus === "DOWN"
+  );
+}
+
+function isWarning(agent: (typeof dashboardStore.agents)[number]) {
+  return (
+    (agent.cpuUsage ?? 0) >= 80 ||
+    (agent.memoryUsage ?? 0) >= 80 ||
+    (agent.diskUsage ?? 0) >= 80
+  );
+}
+
 
 </script>
 
@@ -92,158 +127,175 @@ function getSeverityClass(type: string) {
   <div class="alerts-page">
     <h1>警示中心</h1>
 
-    <div class="alert-grid">
-      <div class="alert-card critical">
-        <div class="alert-title">嚴重警示</div>
-        <div class="alert-value">{{ criticalAlerts.length }}</div>
-      </div>
-
-      <div class="alert-card warning">
-        <div class="alert-title">警告</div>
-        <div class="alert-value">{{ warningAlerts.length }}</div>
-      </div>
-
-      <div class="alert-card healthy">
-        <div class="alert-title">正常主機</div>
-        <div class="alert-value">{{ healthyHosts.length }}</div>
-      </div>
+    <div v-if="dashboardStore.error" class="error-message">
+      {{ dashboardStore.error }}
     </div>
 
-    <div class="alert-panel">
-      <h2>目前警示</h2>
+    <div v-if="dashboardStore.loading" class="loading">
+      載入警示資料中...
+    </div>
 
-      <div class="filter-bar">
-        <button :class="[
-          'filter-btn',
-          selectedFilter === 'ALL' ? 'active' : '',
-        ]" @click="selectedFilter = 'ALL'">
-          全部
-        </button>
+    <template v-else>
 
-        <button :class="[
-          'filter-btn',
-          selectedFilter === 'CRITICAL' ? 'active' : '',
-        ]" @click="selectedFilter = 'CRITICAL'">
-          嚴重
-        </button>
+      <div class="alert-grid">
+        <div class="alert-card critical">
+          <div class="alert-title">嚴重警示</div>
+          <div class="alert-value">{{ criticalAlerts.length }}</div>
+        </div>
 
-        <button :class="[
-          'filter-btn',
-          selectedFilter === 'WARNING' ? 'active' : '',
-        ]" @click="selectedFilter = 'WARNING'">
-          警告
-        </button>
-      </div>
+        <div class="alert-card warning">
+          <div class="alert-title">警告</div>
+          <div class="alert-value">{{ warningAlerts.length }}</div>
+        </div>
 
-      <p v-if="filteredAlerts.length === 0" class="empty-alert">
-        目前沒有警示。
-      </p>
-
-      <div v-else class="alert-list">
-        <div v-for="item in filteredAlerts" :key="`${item.type}-${item.agent.agentCode}`" :class="[
-          'alert-row',
-          item.type === 'CRITICAL'
-            ? 'critical-row'
-            : 'warning-row',
-        ]" @click="selectedAgentCode = item.agent.agentCode">
-          <span :class="[
-            'severity-badge',
-            getSeverityClass(item.type),
-          ]">
-            {{
-              item.type === "CRITICAL"
-                ? "嚴重"
-                : item.type === "WARNING"
-                  ? "警告"
-                  : "資訊"
-            }}
-          </span>
-
-          {{ item.agent.agentCode }}
-
-          <div v-if="item.type === 'CRITICAL'" class="alert-reason">
-            <span v-if="item.agent.status === 'OFFLINE'">
-              主機離線
-            </span>
-
-            <span v-if="item.agent.databaseStatus === 'DOWN'">
-              Database 異常
-            </span>
-
-            <span v-if="item.agent.ftpStatus === 'DOWN'">
-              FTP 異常
-            </span>
-
-            <span v-if="item.agent.applicationStatus === 'DOWN'">
-              應用程式異常
-            </span>
-          </div>
-
-          <div v-else class="alert-reason">
-            <span v-if="(item.agent.cpuUsage ?? 0) >= 80">
-              CPU {{ item.agent.cpuUsage?.toFixed(1) }}%
-            </span>
-
-            <span v-if="(item.agent.memoryUsage ?? 0) >= 80">
-              Memory {{ item.agent.memoryUsage?.toFixed(1) }}%
-            </span>
-
-            <span v-if="(item.agent.diskUsage ?? 0) >= 80">
-              Disk {{ item.agent.diskUsage?.toFixed(1) }}%
-            </span>
-          </div>
+        <div class="alert-card healthy">
+          <div class="alert-title">正常主機</div>
+          <div class="alert-value">{{ healthyHosts.length }}</div>
         </div>
       </div>
 
-      <div v-if="selectedAlert" class="alert-detail-panel">
-        <h2>警示詳細資訊</h2>
+      <div class="alert-panel">
+        <h2>目前警示</h2>
 
-        <p>
-          <strong>Agent Code：</strong>
-          {{ selectedAlert.agentCode }}
+        <div class="filter-bar">
+          <button :class="[
+            'filter-btn',
+            selectedFilter === 'ALL' ? 'active' : '',
+          ]" @click="selectedFilter = 'ALL'">
+            全部
+          </button>
+
+          <button :class="[
+            'filter-btn',
+            selectedFilter === 'CRITICAL' ? 'active' : '',
+          ]" @click="selectedFilter = 'CRITICAL'">
+            嚴重
+          </button>
+
+          <button :class="[
+            'filter-btn',
+            selectedFilter === 'WARNING' ? 'active' : '',
+          ]" @click="selectedFilter = 'WARNING'">
+            警告
+          </button>
+        </div>
+
+        <div class="search-bar">
+          <input v-model="searchKeyword" type="text" placeholder="搜尋 Agent Code 或主機名稱" class="search-input" />
+        </div>
+
+        <p v-if="filteredAlerts.length === 0" class="empty-alert">
+          目前沒有警示。
         </p>
 
-        <p>
-          <strong>主機名稱：</strong>
-          {{ selectedAlert.hostName }}
-        </p>
+        <div v-else class="alert-list">
+          <div v-for="item in filteredAlerts" :key="`${item.type}-${item.agent.agentCode}`" :class="[
+            'alert-row',
+            item.type === 'CRITICAL'
+              ? 'critical-row'
+              : 'warning-row',
+          ]" @click="selectedAgentCode = item.agent.agentCode">
+            <span :class="[
+              'severity-badge',
+              getSeverityClass(item.type),
+            ]">
+              {{
+                item.type === "CRITICAL"
+                  ? "嚴重"
+                  : item.type === "WARNING"
+                    ? "警告"
+                    : "資訊"
+              }}
+            </span>
 
-        <p>
-          <strong>主機狀態：</strong>
-          {{ selectedAlert.status }}
-        </p>
+            {{ item.agent.agentCode }}
 
-        <p>
-          <strong>CPU：</strong>
-          {{ selectedAlert.cpuUsage ?? 0 }}%
-        </p>
+            <div v-if="item.type === 'CRITICAL'" class="alert-reason">
+              <span v-if="item.agent.status === 'OFFLINE'">
+                主機離線
+              </span>
 
-        <p>
-          <strong>Memory：</strong>
-          {{ selectedAlert.memoryUsage ?? 0 }}%
-        </p>
+              <span v-if="item.agent.databaseStatus === 'DOWN'">
+                Database 異常
+              </span>
 
-        <p>
-          <strong>Disk：</strong>
-          {{ selectedAlert.diskUsage ?? 0 }}%
-        </p>
+              <span v-if="item.agent.ftpStatus === 'DOWN'">
+                FTP 異常
+              </span>
 
-        <p>
-          <strong>Database：</strong>
-          {{ selectedAlert.databaseStatus ?? "UNKNOWN" }}
-        </p>
+              <span v-if="item.agent.applicationStatus === 'DOWN'">
+                應用程式異常
+              </span>
+            </div>
 
-        <p>
-          <strong>FTP：</strong>
-          {{ selectedAlert.ftpStatus ?? "UNKNOWN" }}
-        </p>
+            <div v-else class="alert-reason">
+              <span v-if="(item.agent.cpuUsage ?? 0) >= 80">
+                CPU {{ item.agent.cpuUsage?.toFixed(1) }}%
+              </span>
 
-        <p>
-          <strong>應用程式：</strong>
-          {{ selectedAlert.applicationStatus ?? "UNKNOWN" }}
-        </p>
+              <span v-if="(item.agent.memoryUsage ?? 0) >= 80">
+                Memory {{ item.agent.memoryUsage?.toFixed(1) }}%
+              </span>
+
+              <span v-if="(item.agent.diskUsage ?? 0) >= 80">
+                Disk {{ item.agent.diskUsage?.toFixed(1) }}%
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="selectedAlert" class="alert-detail-panel">
+          <h2>警示詳細資訊</h2>
+
+          <p>
+            <strong>Agent Code：</strong>
+            {{ selectedAlert.agentCode }}
+          </p>
+
+          <p>
+            <strong>主機名稱：</strong>
+            {{ selectedAlert.hostName }}
+          </p>
+
+          <p>
+            <strong>主機狀態：</strong>
+            {{ selectedAlert.status }}
+          </p>
+
+          <p>
+            <strong>CPU：</strong>
+            {{ selectedAlert.cpuUsage ?? 0 }}%
+          </p>
+
+          <p>
+            <strong>Memory：</strong>
+            {{ selectedAlert.memoryUsage ?? 0 }}%
+          </p>
+
+          <p>
+            <strong>Disk：</strong>
+            {{ selectedAlert.diskUsage ?? 0 }}%
+          </p>
+
+          <p>
+            <strong>Database：</strong>
+            {{ selectedAlert.databaseStatus ?? "UNKNOWN" }}
+          </p>
+
+          <p>
+            <strong>FTP：</strong>
+            {{ selectedAlert.ftpStatus ?? "UNKNOWN" }}
+          </p>
+
+          <p>
+            <strong>應用程式：</strong>
+            {{ selectedAlert.applicationStatus ?? "UNKNOWN" }}
+          </p>
+        </div>
       </div>
-    </div>
+
+    </template>
+
   </div>
 </template>
 
@@ -387,5 +439,24 @@ function getSeverityClass(type: string) {
 .severity-info {
   background: #2563eb;
   color: white;
+}
+
+.search-bar {
+  margin-bottom: 16px;
+}
+
+.search-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  color: var(--text-main);
+  outline: none;
+}
+
+.search-input:focus {
+  border-color: var(--primary-color);
 }
 </style>

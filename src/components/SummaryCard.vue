@@ -8,19 +8,20 @@ const props = defineProps<{
 
 const cardClass = computed(() => {
   switch (props.title) {
-    case "在線":
+    case "正常":
       return "online";
 
-    case "離線":
+    case "異常":
       return "offline";
 
-    case "異常":
+    case "錯誤事件":
       return "error";
 
     default:
       return "default";
   }
 });
+
 </script>
 
 <template>

@@ -117,31 +117,29 @@ function formatTime(value: string | null | undefined): string {
 }
 
 .log-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12px;
+  display: inline;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  font-size: 13px;
   font-weight: 700;
 }
 
 .log-badge.error {
-  background: #fee2e2;
-  color: #991b1b;
+  color: #dc2626;
 }
 
 .log-badge.warn {
-  background: #fef3c7;
-  color: #92400e;
+  color: #d97706;
 }
 
 .log-badge.info {
-  background: #dbeafe;
-  color: #1d4ed8;
+  color: #2563eb;
 }
 
 .log-badge.debug {
-  background: #e5e7eb;
-  color: #374151;
+  color: var(--text-muted);
 }
 
 .panel-header {

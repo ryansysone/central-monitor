@@ -25,11 +25,20 @@ const router = useRouter();
 
 const agentCode = route.params.agentCode as string;
 
-const loading = ref(true);
+const loading = ref(false);
+const refreshing = ref(false);
+const initialized = ref(false);
 const error = ref("");
+const metricHistoryError = ref("");
+const serviceHistoryError = ref("");
 const host = ref<HostDetail | null>(null);
 const metricHistory = ref<MetricHistory[]>([]);
 const serviceHistory = ref<ServiceHistory[]>([]);
+const lastUpdatedAt = ref<Date | null>(null);
+
+const autoRefreshSeconds = ref(
+  Number(localStorage.getItem("autoRefreshSeconds") || 30)
+);
 
 let refreshTimer: number | undefined;
 
@@ -67,8 +76,9 @@ const serviceAvailability = computed(() => {
 });
 
 const lastUpdated = computed(() => {
-  const latest = recentMetricHistory.value[0]?.collectedAt;
-  return latest ? formatDateTime(latest) : "-";
+  return lastUpdatedAt.value
+    ? lastUpdatedAt.value.toLocaleString("zh-TW")
+    : "-";
 });
 
 function formatDateTime(value: string) {
@@ -90,34 +100,99 @@ function serviceStatusClass(status: string) {
   }
 }
 
-async function loadHost() {
-  loading.value = true;
-  error.value = "";
+function serviceStatusLabel(status: string) {
+  switch (status) {
+    case "UP":
+      return "正常";
 
-  try {
-    host.value = await fetchHostDetail(agentCode);
-  } catch (err) {
-    console.error("Host detail failed", err);
-    error.value = "無法載入主機詳細資訊";
-    loading.value = false;
+    case "DOWN":
+      return "異常";
+
+    default:
+      console.warn(
+        `[Service Status] Unknown status received: ${status}`
+      );
+      return "未知";
+  }
+}
+
+function hostStatusLabel(status: string) {
+  switch (status) {
+    case "ONLINE":
+      return "正常";
+
+    case "OFFLINE":
+      return "異常";
+
+    default:
+      return "未知";
+  }
+}
+
+async function loadHost() {
+  const isInitialLoad = !initialized.value;
+
+  if (loading.value || refreshing.value) {
     return;
   }
 
-  try {
-    metricHistory.value = await fetchMetricHistory(agentCode);
-  } catch (err) {
-    console.error("Metric history failed", err);
-    metricHistory.value = [];
+  if (isInitialLoad) {
+    loading.value = true;
+  } else {
+    refreshing.value = true;
   }
 
-  try {
-    serviceHistory.value = await fetchServiceHistory(agentCode);
-  } catch (err) {
-    console.error("Service history failed", err);
-    serviceHistory.value = [];
-  }
+  error.value = "";
+  metricHistoryError.value = "";
+  serviceHistoryError.value = "";
 
-  loading.value = false;
+  try {
+    host.value = await fetchHostDetail(agentCode);
+
+    const [metricResult, serviceResult] = await Promise.allSettled([
+      fetchMetricHistory(agentCode),
+      fetchServiceHistory(agentCode),
+    ]);
+
+    if (metricResult.status === "fulfilled") {
+      metricHistory.value = metricResult.value;
+    } else {
+      console.error("Metric history failed", metricResult.reason);
+
+      metricHistoryError.value =
+        "效能指標歷史資料更新失敗，目前顯示上一次成功取得的資料";
+
+      if (isInitialLoad) {
+        metricHistory.value = [];
+      }
+    }
+
+    if (serviceResult.status === "fulfilled") {
+      serviceHistory.value = serviceResult.value;
+    } else {
+      console.error("Service history failed", serviceResult.reason);
+
+      serviceHistoryError.value =
+        "服務狀態歷史資料更新失敗，目前顯示上一次成功取得的資料";
+
+      if (isInitialLoad) {
+        serviceHistory.value = [];
+      }
+    }
+
+    initialized.value = true;
+    lastUpdatedAt.value = new Date();
+
+  } catch (err) {
+    console.error("Host detail failed", err);
+
+    error.value = initialized.value
+      ? "主機資料更新失敗，目前顯示上一次成功取得的資料"
+      : "無法載入主機詳細資訊";
+  } finally {
+    loading.value = false;
+    refreshing.value = false;
+  }
 }
 
 function goBack() {
@@ -134,11 +209,15 @@ function goToAgentLogs() {
 }
 
 onMounted(() => {
+  autoRefreshSeconds.value = Number(
+    localStorage.getItem("autoRefreshSeconds") || 30
+  );
+
   loadHost();
 
   refreshTimer = window.setInterval(() => {
     loadHost();
-  }, 30000);
+  }, autoRefreshSeconds.value * 1000);
 });
 
 onUnmounted(() => {
@@ -156,190 +235,246 @@ onUnmounted(() => {
     <h1>主機詳細資訊</h1>
 
     <div class="last-updated">
-      最後更新：{{ lastUpdated }}
+      自動更新：{{ autoRefreshSeconds }} 秒
+
+      <span v-if="refreshing">
+        ・背景更新中...
+      </span>
+
+      <span v-else>
+        ・最後更新：{{ lastUpdated }}
+      </span>
     </div>
 
     <div v-if="loading" class="loading">載入中...</div>
 
-    <div v-else-if="error" class="error">
-      {{ error }}
-    </div>
-
-    <div v-else-if="host">
-      <div class="host-header">
-        <div>
-          <h2>{{ host.agentCode }}</h2>
-          <p class="host-name">{{ host.hostName }}</p>
-        </div>
-
-        <div class="host-actions">
-          <button class="logs-btn" @click="goToAgentLogs">
-            查看此 Agent 日誌
-          </button>
-
-          <span :class="['status-badge', host.status.toLowerCase()]">
-            {{ host.status }}
-          </span>
-        </div>
-
+    <template v-else>
+      <div v-if="error" class="error">
+        {{ error }}
       </div>
 
-      <div class="card-grid">
-        <div class="detail-card gauge-card">
-          <div class="card-title">CPU 使用率</div>
-          <UsageGaugeChart title="CPU" :value="host.cpuUsage" />
+      <div v-if="host">
+        <div class="host-header">
+          <div>
+            <h2>{{ host.agentCode }}</h2>
+            <p class="host-name">{{ host.hostName }}</p>
+          </div>
+
+          <div class="host-actions">
+            <span :class="['status-badge', host.status.toLowerCase()]">
+              <span class="status-dot"></span>
+              {{ hostStatusLabel(host.status) }}
+            </span>
+
+            <button class="refresh-btn" :disabled="loading || refreshing" @click="loadHost">
+              {{ refreshing ? "更新中..." : "重新整理" }}
+            </button>
+
+            <button class="logs-btn" @click="goToAgentLogs">
+              查看 Agent 日誌
+            </button>
+          </div>
+
         </div>
 
-        <div class="detail-card gauge-card">
-          <div class="card-title">Memory 使用率</div>
-          <UsageGaugeChart title="Memory" :value="host.memoryUsage" />
-        </div>
+        <div class="card-grid">
+          <div class="detail-card gauge-card">
+            <div class="card-title">CPU 使用率</div>
+            <UsageGaugeChart title="CPU" :value="host.cpuUsage" />
+          </div>
 
-        <div class="detail-card gauge-card">
-          <div class="card-title">Disk 使用率</div>
-          <UsageGaugeChart title="Disk" :value="host.diskUsage" />
-        </div>
-      </div>
+          <div class="detail-card gauge-card">
+            <div class="card-title">Memory 使用率</div>
+            <UsageGaugeChart title="Memory" :value="host.memoryUsage" />
+          </div>
 
-      <div class="card-grid">
-        <div class="detail-card">
-          <div class="card-title">Database</div>
-          <div class="card-value">
-            {{ host.databaseStatus ?? "UNKNOWN" }}
+          <div class="detail-card gauge-card">
+            <div class="card-title">Disk 使用率</div>
+            <UsageGaugeChart title="Disk" :value="host.diskUsage" />
           </div>
         </div>
-
-        <div class="detail-card">
-          <div class="card-title">FTP</div>
-          <div class="card-value">
-            {{ host.ftpStatus ?? "UNKNOWN" }}
-          </div>
-        </div>
-
-        <div class="detail-card">
-          <div class="card-title">應用程式</div>
-          <div class="card-value">
-            {{ host.applicationStatus ?? "UNKNOWN" }}
-          </div>
-        </div>
-      </div>
-
-      <CpuTrendChart :history="recentMetricHistory" />
-
-      <MemoryTrendChart :history="recentMetricHistory" />
-
-      <DiskTrendChart :history="recentMetricHistory" />
-
-      <ServiceTrendChart :history="recentServiceHistory" />
-
-      <div class="section">
-        <h3>服務狀態時間軸</h3>
-
-        <ServiceTimelineChart :history="recentServiceHistory" />
-      </div>
-
-      <div class="section">
-        <h3>服務可用率報表</h3>
-
-        <ServiceAvailabilityChart :database="serviceAvailability.database" :ftp="serviceAvailability.ftp"
-          :application="serviceAvailability.application" />
 
         <div class="card-grid">
           <div class="detail-card">
-            <div class="card-title">Database 可用率</div>
+            <div class="card-title">Database</div>
             <div class="card-value">
-              {{ serviceAvailability.database }}%
+              <span :class="[
+                'service-badge',
+                serviceStatusClass(host.databaseStatus ?? 'UNKNOWN'),
+              ]">
+                {{ serviceStatusLabel(host.databaseStatus ?? "UNKNOWN") }}
+              </span>
             </div>
           </div>
 
           <div class="detail-card">
-            <div class="card-title">FTP 可用率</div>
+            <div class="card-title">FTP</div>
             <div class="card-value">
-              {{ serviceAvailability.ftp }}%
+              <span :class="[
+                'service-badge',
+                serviceStatusClass(host.ftpStatus ?? 'UNKNOWN'),
+              ]">
+                {{ serviceStatusLabel(host.ftpStatus ?? "UNKNOWN") }}
+              </span>
             </div>
           </div>
 
           <div class="detail-card">
-            <div class="card-title">應用程式可用率</div>
+            <div class="card-title">應用程式</div>
             <div class="card-value">
-              {{ serviceAvailability.application }}%
+              <span :class="[
+                'service-badge',
+                serviceStatusClass(host.applicationStatus ?? 'UNKNOWN'),
+              ]">
+                {{ serviceStatusLabel(host.applicationStatus ?? "UNKNOWN") }}
+              </span>
+            </div>
+
+          </div>
+        </div>
+
+        <CpuTrendChart :history="recentMetricHistory" />
+
+        <MemoryTrendChart :history="recentMetricHistory" />
+
+        <DiskTrendChart :history="recentMetricHistory" />
+
+        <ServiceTrendChart :history="recentServiceHistory" />
+
+        <div class="section">
+          <h3>服務狀態時間軸</h3>
+
+          <ServiceTimelineChart :history="recentServiceHistory" />
+        </div>
+
+        <div class="section">
+          <h3>服務可用率報表</h3>
+
+          <ServiceAvailabilityChart :database="serviceAvailability.database" :ftp="serviceAvailability.ftp"
+            :application="serviceAvailability.application" />
+
+          <div class="card-grid">
+            <div class="detail-card">
+              <div class="card-title">Database 可用率</div>
+              <div class="card-value">
+                {{ serviceAvailability.database }}%
+              </div>
+            </div>
+
+            <div class="detail-card">
+              <div class="card-title">FTP 可用率</div>
+              <div class="card-value">
+                {{ serviceAvailability.ftp }}%
+              </div>
+            </div>
+
+            <div class="detail-card">
+              <div class="card-title">應用程式可用率</div>
+              <div class="card-value">
+                {{ serviceAvailability.application }}%
+              </div>
             </div>
           </div>
         </div>
+
+        <div class="section">
+
+          <h3>效能指標歷史紀錄</h3>
+
+          <div v-if="metricHistoryError" class="section-error">
+            {{ metricHistoryError }}
+          </div>
+
+
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>時間</th>
+                <th>CPU</th>
+                <th>Memory</th>
+                <th>Disk</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr v-if="recentMetricHistory.length === 0">
+                <td colspan="4" class="empty-state">
+                  目前沒有效能指標歷史資料
+                </td>
+              </tr>
+
+              <tr v-for="item in recentMetricHistory" :key="item.id ?? item.collectedAt">
+                <td>{{ formatDateTime(item.collectedAt) }}</td>
+                <td>{{ item.cpuUsage }}%</td>
+                <td>{{ item.memoryUsage }}%</td>
+                <td>{{ item.diskUsage }}%</td>
+              </tr>
+            </tbody>
+
+          </table>
+        </div>
+
+        <div class="section">
+          <h3>服務狀態歷史紀錄</h3>
+
+          <div v-if="serviceHistoryError" class="section-error">
+            {{ serviceHistoryError }}
+          </div>
+
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>時間</th>
+                <th>Database</th>
+                <th>FTP</th>
+                <th>應用程式</th>
+              </tr>
+            </thead>
+
+            <tbody>
+
+              <tr v-if="recentServiceHistory.length === 0">
+                <td colspan="4" class="empty-state">
+                  目前沒有服務狀態歷史資料
+                </td>
+              </tr>
+
+              <tr v-for="item in recentServiceHistory" :key="item.id ?? item.collectedAt">
+                <td>{{ formatDateTime(item.collectedAt) }}</td>
+
+                <td>
+                  <span :class="[
+                    'service-badge',
+                    serviceStatusClass(item.databaseStatus),
+                  ]">
+                    {{ serviceStatusLabel(item.databaseStatus) }}
+                  </span>
+                </td>
+
+                <td>
+                  <span :class="[
+                    'service-badge',
+                    serviceStatusClass(item.ftpStatus),
+                  ]">
+                    {{ serviceStatusLabel(item.ftpStatus) }}
+                  </span>
+                </td>
+
+                <td>
+                  <span :class="[
+                    'service-badge',
+                    serviceStatusClass(item.applicationStatus),
+                  ]">
+                    {{ serviceStatusLabel(item.applicationStatus) }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
+    </template>
 
-      <div class="section">
-        <h3>效能指標歷史紀錄</h3>
-
-        <table class="history-table">
-          <thead>
-            <tr>
-              <th>時間</th>
-              <th>CPU</th>
-              <th>Memory</th>
-              <th>Disk</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            <tr v-for="item in recentMetricHistory" :key="item.id ?? item.collectedAt">
-              <td>{{ formatDateTime(item.collectedAt) }}</td>
-              <td>{{ item.cpuUsage }}%</td>
-              <td>{{ item.memoryUsage }}%</td>
-              <td>{{ item.diskUsage }}%</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="section">
-        <h3>服務狀態歷史紀錄</h3>
-
-        <table class="history-table">
-          <thead>
-            <tr>
-              <th>時間</th>
-              <th>Database</th>
-              <th>FTP</th>
-              <th>應用程式</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            <tr v-for="item in recentServiceHistory" :key="item.id ?? item.collectedAt">
-              <td>{{ formatDateTime(item.collectedAt) }}</td>
-
-              <td>
-                <span :class="[
-                  'service-badge',
-                  serviceStatusClass(item.databaseStatus),
-                ]">
-                  {{ item.databaseStatus }}
-                </span>
-              </td>
-
-              <td>
-                <span :class="[
-                  'service-badge',
-                  serviceStatusClass(item.ftpStatus),
-                ]">
-                  {{ item.ftpStatus }}
-                </span>
-              </td>
-
-              <td>
-                <span :class="[
-                  'service-badge',
-                  serviceStatusClass(item.applicationStatus),
-                ]">
-                  {{ item.applicationStatus }}
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -372,6 +507,12 @@ onUnmounted(() => {
   color: #dc2626;
 }
 
+.section-error {
+  margin-bottom: 12px;
+  color: #dc2626;
+  font-size: 14px;
+}
+
 .host-header {
   display: flex;
   justify-content: space-between;
@@ -390,19 +531,43 @@ onUnmounted(() => {
 }
 
 .status-badge {
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .status-badge.online {
-  background: #dcfce7;
-  color: #166534;
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.status-badge.online .status-dot {
+  background: #22c55e;
 }
 
 .status-badge.offline {
-  background: #fee2e2;
-  color: #991b1b;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.status-badge.offline .status-dot {
+  background: #ef4444;
 }
 
 .card-grid {
@@ -447,6 +612,12 @@ onUnmounted(() => {
   border: 1px solid var(--border-color);
 }
 
+.history-table .empty-state {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
 .history-table th,
 .history-table td {
   padding: 10px;
@@ -473,25 +644,48 @@ onUnmounted(() => {
 }
 
 .service-badge {
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.service-badge::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .service-up {
-  background: #dcfce7;
-  color: #166534;
+  color: #15803d;
+}
+
+.service-up::before {
+  background: #22c55e;
 }
 
 .service-down {
-  background: #fee2e2;
-  color: #991b1b;
+  color: #b91c1c;
+}
+
+.service-down::before {
+  background: #ef4444;
 }
 
 .service-unknown {
-  background: #e5e7eb;
-  color: #374151;
+  color: #64748b;
+}
+
+.service-unknown::before {
+  background: #94a3b8;
 }
 
 .last-updated {
@@ -510,19 +704,42 @@ onUnmounted(() => {
   gap: 12px;
 }
 
+.refresh-btn {
+  min-height: 36px;
+  box-sizing: border-box;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  background: var(--panel-bg);
+  color: var(--text-main);
+  border-radius: 8px;
+  padding: 0 14px;
+  font-weight: 600;
+}
+
+.refresh-btn:hover:not(:disabled) {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.refresh-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .logs-btn {
+  min-height: 36px;
+  box-sizing: border-box;
   cursor: pointer;
   border: 1px solid var(--primary-color);
-  background: var(--panel-bg);
-  color: var(--primary-color);
+  background: var(--primary-color);
+  color: #ffffff;
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 0 14px;
   font-weight: 600;
 }
 
 .logs-btn:hover {
-  background: var(--primary-color);
-  color: #ffffff;
+  opacity: 0.9;
 }
 
 @media (max-width: 768px) {
