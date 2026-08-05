@@ -8,8 +8,9 @@ const props = defineProps<{
 }>();
 
 const statusNameMap: Record<string, string> = {
-  ONLINE: "在線",
-  OFFLINE: "離線",
+  ONLINE: "正常",
+  OFFLINE: "異常",
+  UNKNOWN: "未知",
 };
 
 const chartOption = computed(() => {

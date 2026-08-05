@@ -15,5 +15,5 @@ const chartStyle = computed(() => ({
 </script>
 
 <template>
-  <VChart :option="option" autoresize :style="chartStyle" />
+  <VChart :option="option" :style="chartStyle" autoresize />
 </template>
