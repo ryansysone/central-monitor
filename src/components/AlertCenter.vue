@@ -1,14 +1,37 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import {
+  computed,
+  onMounted,
+  onUnmounted,
+  ref,
+} from "vue";
 import { useNotificationStore } from "../stores/notification";
 
 const notificationStore = useNotificationStore();
 
 const isOpen = ref(false);
 
+const alertCenterRef = ref<HTMLElement | null>(null);
+
 const unreadCount = computed(
   () => notificationStore.items.filter((item) => !item.read).length
 );
+
+const alertLevel = computed(() => {
+  const unreadItems = notificationStore.items.filter(
+    (item) => !item.read
+  );
+
+  if (unreadItems.some((item) => item.type === "error")) {
+    return "error";
+  }
+
+  if (unreadItems.some((item) => item.type === "warning")) {
+    return "warning";
+  }
+
+  return "normal";
+});
 
 function toggleAlertCenter() {
   isOpen.value = !isOpen.value;
@@ -17,13 +40,39 @@ function toggleAlertCenter() {
     notificationStore.markAllAsRead();
   }
 }
+
+function handleDocumentClick(event: MouseEvent): void {
+  if (!isOpen.value) {
+    return;
+  }
+
+  const target = event.target;
+
+  if (!(target instanceof Node)) {
+    return;
+  }
+
+  if (!alertCenterRef.value?.contains(target)) {
+    isOpen.value = false;
+  }
+}
+
+onMounted(() => {
+  document.addEventListener("click", handleDocumentClick);
+});
+
+onUnmounted(() => {
+  document.removeEventListener("click", handleDocumentClick);
+});
 </script>
 
 <template>
-  <div class="alert-center">
-    <button class="alert-center-button" @click="toggleAlertCenter">
+  <div ref="alertCenterRef" class="alert-center">
+
+    <button type="button" :class="['alert-center-button', alertLevel]" :aria-expanded="isOpen" aria-label="開啟警示中心"
+      @click="toggleAlertCenter">
       警示
-      <span v-if="unreadCount > 0" class="alert-badge">
+      <span v-if="unreadCount > 0" :class="['alert-badge', alertLevel]">
         {{ unreadCount }}
       </span>
     </button>
@@ -32,9 +81,10 @@ function toggleAlertCenter() {
       <div class="alert-panel-header">
         <h3>警示中心</h3>
 
-        <button @click="notificationStore.clearNotifications">
+        <button type="button" @click="notificationStore.clearNotifications">
           全部清除
         </button>
+
       </div>
 
       <div v-if="notificationStore.items.length === 0" class="alert-empty">
@@ -58,9 +108,11 @@ function toggleAlertCenter() {
             </div>
           </div>
 
-          <button class="alert-remove" @click="notificationStore.removeNotification(item.id)">
+          <button class="alert-remove" type="button" aria-label="移除警示"
+            @click="notificationStore.removeNotification(item.id)">
             ×
           </button>
+
         </div>
       </div>
     </div>
@@ -93,10 +145,21 @@ function toggleAlertCenter() {
   height: 20px;
   padding: 0 6px;
   border-radius: 999px;
-  background: #dc2626;
   color: #ffffff;
   font-size: 12px;
   line-height: 20px;
+}
+
+.alert-badge.normal {
+  background: #7c3aed;
+}
+
+.alert-badge.warning {
+  background: #d97706;
+}
+
+.alert-badge.error {
+  background: #dc2626;
 }
 
 .alert-panel {
@@ -185,5 +248,48 @@ function toggleAlertCenter() {
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
+}
+
+.alert-center-button.warning {
+  background: #d97706;
+}
+
+.alert-center-button.error {
+  background: #dc2626;
+  animation: alert-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes alert-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+  }
+
+  50% {
+    box-shadow: 0 0 0 6px rgba(220, 38, 38, 0.18);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alert-center-button.error {
+    animation: none;
+  }
+}
+
+.alert-item.warning {
+  border-left: 4px solid #f59e0b;
+}
+
+.alert-item.error {
+  border-left: 4px solid #ef4444;
+}
+
+.alert-item.success {
+  border-left: 4px solid #22c55e;
+}
+
+.alert-item.info {
+  border-left: 4px solid #3b82f6;
 }
 </style>
