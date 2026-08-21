@@ -113,17 +113,16 @@ const description = computed(() => {
   right: 18px;
   bottom: 0;
   left: 18px;
-  height: 3px;
+  height: 2px;
   border-radius: 999px 999px 0 0;
   background: #64748b;
 }
 
 .summary-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(59, 130, 246, 0.2);
+  border-color: rgba(148, 163, 184, 0.28);
   box-shadow:
-    0 2px 5px rgba(15, 23, 42, 0.04),
-    0 12px 28px rgba(15, 23, 42, 0.06);
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 10px 24px rgba(15, 23, 42, 0.05);
 }
 
 .summary-header {
@@ -197,10 +196,6 @@ const description = computed(() => {
   color: #15803d;
 }
 
-.summary-card.online .summary-value {
-  color: #15803d;
-}
-
 /* 異常 */
 .summary-card.offline::after {
   background: #ef4444;
@@ -208,10 +203,6 @@ const description = computed(() => {
 
 .summary-card.offline .summary-icon {
   background: #fef2f2;
-  color: #b91c1c;
-}
-
-.summary-card.offline .summary-value {
   color: #b91c1c;
 }
 
@@ -225,9 +216,6 @@ const description = computed(() => {
   color: #c2410c;
 }
 
-.summary-card.error .summary-value {
-  color: #c2410c;
-}
 
 @media (max-width: 600px) {
   .summary-card {

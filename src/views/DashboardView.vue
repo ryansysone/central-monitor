@@ -130,33 +130,35 @@ const serviceStatusSummary = computed(() => {
   };
 });
 
+
 const dashboardHealthScore = computed(() => {
-  const total =
-    dashboardStore.summary.totalAgents;
+  const total = dashboardStore.summary.totalAgents;
 
   if (total === 0) {
     return 100;
   }
 
-  const onlinePenalty =
-    (dashboardStore.summary.offlineAgents /
-      total) *
-    40;
+  const offlineRate =
+    dashboardStore.summary.offlineAgents / total;
 
-  const criticalPenalty =
-    criticalAgents.value.length * 15;
+  const criticalRate =
+    criticalAgents.value.length / total;
 
-  const errorPenalty =
-    errorAgents.value.length * 10;
+  const errorRate =
+    errorAgents.value.length / total;
 
   const score =
     100 -
-    onlinePenalty -
-    criticalPenalty -
-    errorPenalty;
+    offlineRate * 40 -
+    criticalRate * 35 -
+    errorRate * 25;
 
-  return Math.max(0, Math.round(score));
+  return Math.max(
+    0,
+    Math.min(100, Math.round(score))
+  );
 });
+
 
 const healthStatusLabel = computed(() => {
   if (dashboardHealthScore.value >= 90) {
@@ -566,9 +568,9 @@ onUnmounted(() => {
 
       <div class="section-heading">
         <div>
-          <h2>監控中心</h2>
+          <h2>異常監控</h2>
           <p>
-            即時掌握系統健康度與需要注意的主機
+            快速掌握主機異常、高資源使用與錯誤事件
           </p>
         </div>
       </div>
@@ -704,7 +706,7 @@ onUnmounted(() => {
                 ERROR LOGS
               </span>
 
-              <h3>異常主機</h3>
+              <h3>ERROR 主機</h3>
 
               <p class="widget-hint">
                 偵測到 ERROR 等級日誌
@@ -718,14 +720,13 @@ onUnmounted(() => {
 
           <div v-if="errorAgents.length === 0" class="widget-empty-state">
             <span class="empty-state-dot success"></span>
-            目前沒有異常主機
+            目前沒有 ERROR 主機
           </div>
 
           <ul v-else class="widget-host-list">
             <li v-for="agent in errorAgents" :key="agent.agentCode" role="button" tabindex="0"
               @click="goToHostDetail(agent.agentCode)" @keydown.enter.prevent="goToHostDetail(agent.agentCode)"
               @keydown.space.prevent="goToHostDetail(agent.agentCode)">
-
               <span class="error-dot"></span>
 
               <span class="widget-host-name">
@@ -835,7 +836,42 @@ onUnmounted(() => {
           empty-text="目前沒有 Disk 資料" />
       </section>
 
+      <div class="section-heading">
+        <div>
+          <h2>監控分析</h2>
+
+          <p>
+            查看異常事件與主機狀態的整體分布
+          </p>
+        </div>
+      </div>
+
+      <section class="analytics-grid">
+        <TopErrorHostsChart :logs="dashboardStore.logs" :top-n="topN" />
+
+        <ErrorDistributionChart :logs="dashboardStore.logs" />
+
+        <HostStatusDistributionChart :hosts="dashboardStore.agents" />
+      </section>
+
+
+      <div class="section-heading">
+        <div>
+          <h2>主機列表</h2>
+
+          <p>
+            檢視所有 Agent 的即時狀態與資源使用率
+          </p>
+        </div>
+
+        <span class="section-count">
+          {{ filteredAgents.length }} 台
+        </span>
+      </div>
+
       <section class="content-section">
+
+        <!-- 主機搜尋 -->
         <div class="search-panel">
           <div class="search-field">
             <span class="search-icon" aria-hidden="true">
@@ -856,31 +892,8 @@ onUnmounted(() => {
             清除搜尋
           </button>
         </div>
-      </section>
 
-      <section class="analytics-grid">
-        <TopErrorHostsChart :logs="dashboardStore.logs" :top-n="topN" />
-
-        <ErrorDistributionChart :logs="dashboardStore.logs" />
-
-        <HostStatusDistributionChart :hosts="dashboardStore.agents" />
-      </section>
-
-      <div class="section-heading">
-        <div>
-          <h2>主機列表</h2>
-
-          <p>
-            檢視所有 Agent 的即時狀態與資源使用率
-          </p>
-        </div>
-
-        <span class="section-count">
-          {{ filteredAgents.length }} 台
-        </span>
-      </div>
-
-      <section class="content-section">
+        <!-- 搜尋不到主機 -->
         <div v-if="
           filteredAgents.length === 0 &&
           searchKeyword.trim()
@@ -902,7 +915,9 @@ onUnmounted(() => {
           </button>
         </div>
 
+        <!-- 主機列表 -->
         <AgentStatusTable v-else :items="filteredAgents" @select-agent="goToHostDetail" />
+
       </section>
 
       <div class="section-heading">
@@ -942,6 +957,10 @@ onUnmounted(() => {
     "Segoe UI",
     sans-serif;
 }
+
+/* =========================
+   Page Header
+   ========================= */
 
 .page-header {
   display: flex;
@@ -1010,10 +1029,10 @@ onUnmounted(() => {
   gap: 7px;
   min-height: 30px;
   padding: 0 11px;
-  border: 1px solid #bbf7d0;
+  border: 1px solid rgba(34, 197, 94, 0.22);
   border-radius: 999px;
-  background: #f0fdf4;
-  color: #15803d;
+  background: rgba(34, 197, 94, 0.08);
+  color: #16a34a;
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
@@ -1039,6 +1058,10 @@ onUnmounted(() => {
   font-size: 13px;
   line-height: 1.55;
 }
+
+/* =========================
+   Refresh Information
+   ========================= */
 
 .refresh-information {
   display: flex;
@@ -1067,6 +1090,10 @@ onUnmounted(() => {
   color: var(--primary-color);
   font-weight: 650;
 }
+
+/* =========================
+   Header Actions
+   ========================= */
 
 .header-actions {
   display: flex;
@@ -1099,17 +1126,14 @@ onUnmounted(() => {
 
 .secondary-button {
   border: 1px solid var(--border-color);
-  background: var(--panel-bg);
-  color: var(--text-main);
+  background: transparent;
+  color: var(--text-muted);
 }
 
 .secondary-button:hover:not(:disabled) {
-  border-color:
-    color-mix(in srgb,
-      var(--primary-color) 55%,
-      var(--border-color));
-  color: var(--primary-color);
-  transform: translateY(-1px);
+  border-color: var(--border-color);
+  background: rgba(148, 163, 184, 0.08);
+  color: var(--text-main);
 }
 
 .primary-button {
@@ -1150,6 +1174,10 @@ onUnmounted(() => {
   }
 }
 
+/* =========================
+   Status Message
+   ========================= */
+
 .status-message {
   display: flex;
   align-items: flex-start;
@@ -1162,9 +1190,9 @@ onUnmounted(() => {
 }
 
 .status-message.error {
-  border-color: #fecaca;
-  background: #fef2f2;
-  color: #b91c1c;
+  border-color: rgba(220, 38, 38, 0.22);
+  background: rgba(220, 38, 38, 0.08);
+  color: #dc2626;
 }
 
 .status-message p {
@@ -1185,6 +1213,10 @@ onUnmounted(() => {
   font-weight: 800;
 }
 
+/* =========================
+   Summary
+   ========================= */
+
 .summary-grid {
   display: grid;
   grid-template-columns:
@@ -1201,6 +1233,10 @@ onUnmounted(() => {
 .summary-item :deep(.summary-card) {
   height: 100%;
 }
+
+/* =========================
+   Service Status
+   ========================= */
 
 .service-status-grid {
   display: grid;
@@ -1224,18 +1260,17 @@ onUnmounted(() => {
   background: var(--panel-bg);
   box-shadow:
     0 1px 2px rgba(15, 23, 42, 0.03),
-    0 8px 22px rgba(15, 23, 42, 0.04);
+    0 4px 14px rgba(15, 23, 42, 0.035);
   transition:
-    transform 0.18s ease,
     border-color 0.18s ease,
     box-shadow 0.18s ease;
 }
 
 .service-status-card:hover {
-  transform: translateY(-2px);
+  border-color: rgba(148, 163, 184, 0.28);
   box-shadow:
-    0 2px 5px rgba(15, 23, 42, 0.04),
-    0 12px 26px rgba(15, 23, 42, 0.06);
+    0 1px 2px rgba(15, 23, 42, 0.03),
+    0 6px 18px rgba(15, 23, 42, 0.045);
 }
 
 .service-status-card::before {
@@ -1276,13 +1311,13 @@ onUnmounted(() => {
 }
 
 .service-status-card.up .service-status-icon {
-  background: #f0fdf4;
-  color: #15803d;
+  background: rgba(34, 197, 94, 0.09);
+  color: #16a34a;
 }
 
 .service-status-card.down .service-status-icon {
-  background: #fef2f2;
-  color: #b91c1c;
+  background: rgba(220, 38, 38, 0.09);
+  color: #dc2626;
 }
 
 .service-status-card.unknown .service-status-icon {
@@ -1321,12 +1356,16 @@ onUnmounted(() => {
   color: #64748b;
 }
 
+/* =========================
+   Section Heading
+   ========================= */
+
 .section-heading {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 20px;
-  margin: 30px 0 16px;
+  margin: 38px 0 16px;
 }
 
 .section-heading h2 {
@@ -1358,12 +1397,16 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
+/* =========================
+   NOC Widgets
+   ========================= */
+
 .noc-widgets-grid {
   display: grid;
   grid-template-columns:
-    repeat(5, minmax(0, 1fr));
-  gap: 18px;
-  margin-bottom: 30px;
+    1.35fr repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
 }
 
 .noc-card {
@@ -1376,30 +1419,31 @@ onUnmounted(() => {
   background: var(--panel-bg);
   box-shadow:
     0 1px 2px rgba(15, 23, 42, 0.03),
-    0 8px 22px rgba(15, 23, 42, 0.04);
+    0 4px 14px rgba(15, 23, 42, 0.035);
   transition:
-    transform 0.18s ease,
     border-color 0.18s ease,
     box-shadow 0.18s ease;
 }
 
 .noc-card:hover {
-  transform: translateY(-2px);
-  border-color:
-    rgba(59, 130, 246, 0.16);
+  border-color: rgba(148, 163, 184, 0.28);
   box-shadow:
-    0 2px 5px rgba(15, 23, 42, 0.04),
-    0 12px 28px rgba(15, 23, 42, 0.06);
+    0 1px 2px rgba(15, 23, 42, 0.03),
+    0 6px 18px rgba(15, 23, 42, 0.045);
 }
 
 .card-eyebrow {
   display: block;
-  margin-bottom: 7px;
+  margin-bottom: 8px;
   color: var(--text-muted);
   font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
+  font-weight: 650;
+  letter-spacing: 0.12em;
 }
+
+/* =========================
+   Health Score
+   ========================= */
 
 .health-score-card {
   display: flex;
@@ -1453,6 +1497,10 @@ onUnmounted(() => {
   color: #dc2626;
 }
 
+/* =========================
+   Widget Header
+   ========================= */
+
 .widget-header {
   display: flex;
   align-items: flex-start;
@@ -1484,14 +1532,18 @@ onUnmounted(() => {
 }
 
 .danger-count {
-  background: #fef2f2;
+  background: rgba(220, 38, 38, 0.09);
   color: #dc2626;
 }
 
 .warning-count {
-  background: #fff7ed;
-  color: #ea580c;
+  background: rgba(245, 158, 11, 0.1);
+  color: #d97706;
 }
+
+/* =========================
+   Widget Empty State
+   ========================= */
 
 .widget-empty-state {
   display: flex;
@@ -1518,6 +1570,10 @@ onUnmounted(() => {
 .empty-state-dot.success {
   background: #22c55e;
 }
+
+/* =========================
+   Widget Host List
+   ========================= */
 
 .widget-host-list {
   max-height: 104px;
@@ -1587,6 +1643,10 @@ onUnmounted(() => {
   background: #f97316;
 }
 
+/* =========================
+   Critical Hosts
+   ========================= */
+
 .critical-list li {
   align-items: flex-start;
 }
@@ -1604,6 +1664,10 @@ onUnmounted(() => {
   line-height: 1.4;
 }
 
+/* =========================
+   Latest Error
+   ========================= */
+
 .latest-error-body {
   display: flex;
   flex-direction: column;
@@ -1611,9 +1675,9 @@ onUnmounted(() => {
   min-height: 78px;
   box-sizing: border-box;
   padding: 11px 12px;
-  border: 1px solid #fecaca;
+  border: 1px solid rgba(220, 38, 38, 0.22);
   border-radius: 10px;
-  background: rgba(254, 242, 242, 0.6);
+  background: rgba(220, 38, 38, 0.055);
 }
 
 .clickable-error {
@@ -1626,7 +1690,7 @@ onUnmounted(() => {
 .clickable-error:hover,
 .clickable-error:focus-visible {
   transform: translateY(-1px);
-  border-color: #fca5a5;
+  border-color: rgba(220, 38, 38, 0.4);
 }
 
 .latest-error-host {
@@ -1674,6 +1738,10 @@ onUnmounted(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* =========================
+   Chart Toolbar
+   ========================= */
 
 .chart-section-heading {
   align-items: center;
@@ -1728,18 +1796,30 @@ onUnmounted(() => {
   font-size: 11px;
 }
 
+/* =========================
+   Charts
+   ========================= */
+
 .top-charts-grid,
 .analytics-grid {
   display: grid;
   grid-template-columns:
     repeat(3, minmax(0, 1fr));
   gap: 18px;
-  margin-bottom: 26px;
+  margin-bottom: 32px;
 }
 
+/* =========================
+   Content Section
+   ========================= */
+
 .content-section {
-  margin-bottom: 26px;
+  margin-bottom: 32px;
 }
+
+/* =========================
+   Search Panel
+   ========================= */
 
 .search-panel {
   display: flex;
@@ -1821,6 +1901,10 @@ onUnmounted(() => {
   color: var(--primary-color);
 }
 
+/* =========================
+   Empty Filter
+   ========================= */
+
 .empty-filter-message {
   display: flex;
   align-items: center;
@@ -1870,7 +1954,9 @@ onUnmounted(() => {
   cursor: pointer;
 }
 
-/* Loading Skeleton */
+/* =========================
+   Loading Skeleton
+   ========================= */
 
 .dashboard-skeleton {
   width: 100%;
@@ -1976,6 +2062,10 @@ onUnmounted(() => {
   }
 }
 
+/* =========================
+   Responsive - 1280px
+   ========================= */
+
 @media (max-width: 1280px) {
 
   .noc-widgets-grid,
@@ -1988,6 +2078,10 @@ onUnmounted(() => {
     grid-column: span 2;
   }
 }
+
+/* =========================
+   Responsive - 1050px
+   ========================= */
 
 @media (max-width: 1050px) {
   .page-header {
@@ -2005,6 +2099,10 @@ onUnmounted(() => {
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================
+   Responsive - 850px
+   ========================= */
 
 @media (max-width: 850px) {
 
@@ -2037,6 +2135,10 @@ onUnmounted(() => {
     padding-left: 2px;
   }
 }
+
+/* =========================
+   Responsive - 600px
+   ========================= */
 
 @media (max-width: 600px) {
   .page-header {
@@ -2106,6 +2208,10 @@ onUnmounted(() => {
     width: 100%;
   }
 }
+
+/* =========================
+   Accessibility
+   ========================= */
 
 @media (prefers-reduced-motion: reduce) {
 
