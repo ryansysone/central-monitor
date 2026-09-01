@@ -19,6 +19,7 @@
   "dependencies": {
     "chart.js": "^4.5.1",
     "echarts": "^6.1.0",
+    "lucide-vue-next": "^1.0.0",
     "pinia": "^3.0.4",
     "vue": "beta",
     "vue-chartjs": "^5.3.3",
